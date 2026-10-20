@@ -4,6 +4,8 @@ description: Code diff and regression review specialist (read-only)
 tools: read, bash
 knowledge:
   - knowledge/review-checklist.md
+skills:
+  - go-code-review
 required_fields:
   - task
 ---

@@ -10,6 +10,7 @@ import {
 	formatWorkspaceSummary,
 	loadRuntimeKnowledgeFiles,
 	type OrchestratorCatalog,
+	resolveSpecialistSkills,
 } from "./discovery.ts";
 import type {
 	AgentScope,
@@ -193,9 +194,22 @@ export async function executeSpecialistStage(opts: {
 
 	// Load domain knowledge files on demand at runtime (never in main orchestrator context)
 	const { loadedPaths, combinedMarkdown } = loadRuntimeKnowledgeFiles(specialist, cwd, projectConfigDir);
+	const resolvedSkillDirs = resolveSpecialistSkills(specialist, cwd, projectConfigDir);
 	const fullSystemPrompt = `${specialist.systemPrompt}${combinedMarkdown}`.trim();
 
-	const args: string[] = ["--mode", "json", "-p", "--no-session"];
+	// Isolate the specialist subprocess:
+	// - `-ne`: disable global extensions (prevents headless UI approval deadlocks from confirm-edit-only.ts and recursive orchestrator loading)
+	// - `-ns`: disable all global skills by default (only explicit `--skill` mounts below are loaded)
+	// - `-nc`: disable global AGENTS.md/CLAUDE.md context files so only the specialist's domain knowledge enters context
+	const args: string[] = ["--mode", "json", "-p", "--no-session", "-ne", "-ns", "-nc"];
+	if (specialist.mcp) {
+		args.push("-e", "builtin:mcp");
+	} else {
+		args.push("--no-mcp");
+	}
+	for (const skillDir of resolvedSkillDirs) {
+		args.push("--skill", skillDir);
+	}
 	const inheritsDispatchConfig = !specialist.model;
 	const model = specialist.model ?? dispatchDefaults.model;
 	if (model) args.push("--model", model);
@@ -212,7 +226,10 @@ export async function executeSpecialistStage(opts: {
 		agent: specialist.name,
 		agentSource: specialist.source,
 		task: taskPrompt,
-		knowledgeLoaded: loadedPaths,
+		knowledgeLoaded: [
+			...loadedPaths,
+			...specialist.skills.map((s) => `skill:${s}`),
+		],
 		exitCode: -1,
 		messages: [],
 		stderr: "",
@@ -720,7 +737,6 @@ export async function runThinOrchestratorProtocol(opts: {
 					gateError,
 				});
 
-				const activeIdx = results.findIndex((r) => r.stepId === step.id);
 				const stageRes = await executeSpecialistStage({
 					cwd: ctx.cwd,
 					projectConfigDir: catalog.projectConfigDir,
@@ -733,9 +749,7 @@ export async function runThinOrchestratorProtocol(opts: {
 					attempt,
 					signal,
 					onProgress: (current) => {
-						if (activeIdx >= 0) results[activeIdx] = current;
-						else if (results.length === i) results.push(current);
-						else results[i] = current;
+						results[i] = current;
 						emitProgress(
 							`Step 6/7 (Delegate [${i + 1}/${resolvedSteps.length}] ${spec.name}${attempt > 1 ? ` retry #${attempt - 1}` : ""}): ${
 								getFinalAssistantText(current.messages).slice(0, 80) || "running..."
@@ -744,8 +758,7 @@ export async function runThinOrchestratorProtocol(opts: {
 					},
 				});
 
-				if (results.length <= i) results.push(stageRes);
-				else results[i] = stageRes;
+				results[i] = stageRes;
 				finalStageResult = stageRes;
 
 				if (!isStageFailed(stageRes)) {

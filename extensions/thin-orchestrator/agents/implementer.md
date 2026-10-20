@@ -4,6 +4,9 @@ description: Scoped code implementation specialist that executes the plan precis
 tools: read, edit, write, bash
 knowledge:
   - knowledge/implementation-conventions.md
+skills:
+  - go-defensive
+  - go-error-handling
 required_fields:
   - task
 post_gate: git diff --check

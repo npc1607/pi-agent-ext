@@ -13,6 +13,8 @@ type SpecialistFrontmatter = {
 	tools?: unknown;
 	model?: unknown;
 	knowledge?: unknown;
+	skills?: unknown;
+	mcp?: unknown;
 	required_fields?: unknown;
 	pre_check?: unknown;
 	post_gate?: unknown;
@@ -80,6 +82,8 @@ function loadSpecialistsFromDir(dir: string, source: "builtin" | "user" | "proje
 			tools: tools.length > 0 ? tools : undefined,
 			model: typeof frontmatter.model === "string" && frontmatter.model.trim() ? frontmatter.model.trim() : undefined,
 			knowledgeFiles: parseStringList(frontmatter.knowledge),
+			skills: parseStringList(frontmatter.skills),
+			mcp: frontmatter.mcp === true || frontmatter.mcp === "true",
 			requiredFields: parseStringList(frontmatter.required_fields),
 			preCheckCmd:
 				typeof frontmatter.pre_check === "string" && frontmatter.pre_check.trim()
@@ -250,6 +254,37 @@ export function loadRuntimeKnowledgeFiles(
 				? `\n\n# Runtime Domain Knowledge (Isolated Context)\n\n${sections.join("\n\n---\n\n")}`
 				: "",
 	};
+}
+
+/**
+ * Resolve on-demand skill directories for a specialist (`--skill <path>`).
+ * All other global skills are disabled via `-ns` so the specialist context stays unpolluted.
+ */
+export function resolveSpecialistSkills(
+	specialist: SpecialistAgent,
+	cwd: string,
+	projectConfigDir: string | null,
+): string[] {
+	if (specialist.skills.length === 0) return [];
+
+	const skillRoots = [
+		...(projectConfigDir ? [path.join(projectConfigDir, "skills")] : []),
+		path.join(cwd, ".agents", "skills"),
+		path.join(getAgentDir(), "skills"),
+		path.resolve(EXTENSION_DIR, "../../skills"),
+	];
+
+	const resolvedPaths: string[] = [];
+	for (const skillName of specialist.skills) {
+		for (const root of skillRoots) {
+			const candidate = path.join(root, skillName);
+			if (isDirectory(candidate) && fs.existsSync(path.join(candidate, "SKILL.md"))) {
+				resolvedPaths.push(candidate);
+				break;
+			}
+		}
+	}
+	return resolvedPaths;
 }
 
 function safeExecGit(cwd: string, args: string[]): string | null {

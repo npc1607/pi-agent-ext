@@ -12,6 +12,10 @@ export interface SpecialistAgent {
 	model?: string;
 	/** Relative paths to runtime knowledge files (loaded on demand at Step 6, never in main prompt). */
 	knowledgeFiles: string[];
+	/** Skill names to mount on demand via `--skill` in the isolated child process (all other global skills are disabled via `-ns`). */
+	skills: string[];
+	/** Whether to enable `builtin:mcp` in the isolated child process (default: false, passes `--no-mcp`). */
+	mcp?: boolean;
 	/** Required input fields that Step 3 (Gather) must collect before delegation. */
 	requiredFields: string[];
 	/** Optional deterministic shell command run at Step 2 (Check) before invoking this specialist. */
