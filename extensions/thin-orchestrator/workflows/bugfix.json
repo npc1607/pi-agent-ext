@@ -1,0 +1,35 @@
+{
+  "name": "bugfix",
+  "description": "End-to-end bug diagnosis, fix plan, implementation, verification gate, and review",
+  "requiredFields": ["task"],
+  "preChecks": [],
+  "steps": [
+    {
+      "id": "recon",
+      "agent": "scout",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug to Investigate\n{task}\n\nLocate the root cause, relevant files, line ranges, and existing tests."
+    },
+    {
+      "id": "plan",
+      "agent": "planner",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Scout Reconnaissance Report\n{step:recon}\n\nCreate a minimal, targeted fix plan."
+    },
+    {
+      "id": "implement",
+      "agent": "implementer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Approved Fix Plan\n{step:plan}\n\nImplement the fix cleanly.",
+      "gateCmd": "git diff --check",
+      "maxRetries": 1
+    },
+    {
+      "id": "verify",
+      "agent": "verifier",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\nVerify compilation and run relevant unit tests."
+    },
+    {
+      "id": "review",
+      "agent": "reviewer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:verify}\n\nReview the diff for regressions and edge cases."
+    }
+  ]
+}

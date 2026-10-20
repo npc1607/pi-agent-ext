@@ -1,0 +1,35 @@
+{
+  "name": "feature",
+  "description": "Full feature development pipeline: recon -> architecture plan -> implementation -> verification -> review",
+  "requiredFields": ["task"],
+  "preChecks": [],
+  "steps": [
+    {
+      "id": "recon",
+      "agent": "scout",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\nMap existing architecture, extension points, interfaces, and test patterns."
+    },
+    {
+      "id": "plan",
+      "agent": "planner",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Scout Reconnaissance Report\n{step:recon}\n\nDesign the step-by-step implementation blueprint."
+    },
+    {
+      "id": "implement",
+      "agent": "implementer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Blueprint\n{step:plan}\n\nImplement the feature according to the blueprint.",
+      "gateCmd": "git diff --check",
+      "maxRetries": 1
+    },
+    {
+      "id": "verify",
+      "agent": "verifier",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\nRun build and test verification."
+    },
+    {
+      "id": "review",
+      "agent": "reviewer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:verify}\n\nPerform final code review."
+    }
+  ]
+}

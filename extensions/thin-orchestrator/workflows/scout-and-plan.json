@@ -1,0 +1,18 @@
+{
+  "name": "scout-and-plan",
+  "description": "Read-only reconnaissance and technical design plan without modifying files",
+  "requiredFields": ["task"],
+  "preChecks": [],
+  "steps": [
+    {
+      "id": "recon",
+      "agent": "scout",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Investigation Target\n{task}\n\nPerform thorough codebase reconnaissance."
+    },
+    {
+      "id": "plan",
+      "agent": "planner",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Investigation Target\n{task}\n\n## Scout Reconnaissance Report\n{step:recon}\n\nProduce a complete technical design & execution plan."
+    }
+  ]
+}

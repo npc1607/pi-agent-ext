@@ -1,0 +1,25 @@
+{
+  "name": "review-and-fix",
+  "description": "Review current uncommitted changes, fix critical/warning findings, and re-verify",
+  "requiredFields": ["task"],
+  "preChecks": [],
+  "steps": [
+    {
+      "id": "initial_review",
+      "agent": "reviewer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Review Focus\n{task}\n\nInspect current `git diff` and identify any bugs, edge cases, or rule violations."
+    },
+    {
+      "id": "fix",
+      "agent": "implementer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Original Goal\n{task}\n\n## Review Findings\n{step:initial_review}\n\nAddress all [CRITICAL] and [WARNING] findings from the review.",
+      "gateCmd": "git diff --check",
+      "maxRetries": 1
+    },
+    {
+      "id": "verify",
+      "agent": "verifier",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Applied Fixes\n{step:fix}\n\nVerify build and tests pass after the review fixes."
+    }
+  ]
+}
