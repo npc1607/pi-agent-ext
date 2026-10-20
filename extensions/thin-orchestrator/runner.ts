@@ -197,16 +197,12 @@ export async function executeSpecialistStage(opts: {
 	const resolvedSkillDirs = resolveSpecialistSkills(specialist, cwd, projectConfigDir);
 	const fullSystemPrompt = `${specialist.systemPrompt}${combinedMarkdown}`.trim();
 
-	// Isolate the specialist subprocess:
-	// - `-ne`: disable global extensions (prevents headless UI approval deadlocks from confirm-edit-only.ts and recursive orchestrator loading)
-	// - `-ns`: disable all global skills by default (only explicit `--skill` mounts below are loaded)
-	// - `-nc`: disable global AGENTS.md/CLAUDE.md context files so only the specialist's domain knowledge enters context
-	const args: string[] = ["--mode", "json", "-p", "--no-session", "-ne", "-ns", "-nc"];
-	if (specialist.mcp) {
-		args.push("-e", "builtin:mcp");
-	} else {
-		args.push("--no-mcp");
-	}
+	// Isolate the specialist subprocess context:
+	// - Keep extensions enabled so custom model providers (e.g. npm:pi-antigravity, npm:pi-provider-qoder) load normally.
+	// - Set `PI_ORCHESTRATOR_SUBAGENT=1` in child env so interactive-only approval guards (`confirm-edit-only.ts`) do not deadlock headless `--mode json -p` runs.
+	// - `-ns`: disable global skills by default (only explicit `--skill` mounts below are loaded).
+	// - `-nc`: disable global AGENTS.md/CLAUDE.md context files so only the specialist's domain knowledge enters context.
+	const args: string[] = ["--mode", "json", "-p", "--no-session", "-ns", "-nc"];
 	for (const skillDir of resolvedSkillDirs) {
 		args.push("--skill", skillDir);
 	}
@@ -257,6 +253,10 @@ export async function executeSpecialistStage(opts: {
 			const invocation = getPiInvocation(args);
 			const proc = spawn(invocation.command, invocation.args, {
 				cwd,
+				env: {
+					...process.env,
+					PI_ORCHESTRATOR_SUBAGENT: "1",
+				},
 				shell: false,
 				stdio: ["ignore", "pipe", "pipe"],
 			});

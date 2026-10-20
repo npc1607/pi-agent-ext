@@ -62,8 +62,7 @@ Copy into your pi extensions directory:
 
 ```bash
 mkdir -p ~/.pi/agent/extensions
-# clone anywhere you like, e.g. ~/Project
-cp ~/Project/pi-agent-ext/extensions/confirm-edit-only.ts ~/.pi/agent/extensions/
+cp extensions/confirm-edit-only.ts ~/.pi/agent/extensions/
 ```
 
 Then start pi (or run `/reload` in a running session).
@@ -93,8 +92,7 @@ A deterministic multi-agent orchestration extension implementing **Meta's Thin O
 #### Install
 
 ```bash
-# clone anywhere you like, e.g. ~/Project
-ln -s ~/Project/pi-agent-ext/extensions/thin-orchestrator ~/.pi/agent/extensions/thin-orchestrator
+ln -s "$(pwd)/extensions/thin-orchestrator" ~/.pi/agent/extensions/thin-orchestrator
 ```
 
 See [`extensions/thin-orchestrator/README.md`](extensions/thin-orchestrator/README.md) for full usage (`/orchestrate` command and `thin_orchestrator` tool).

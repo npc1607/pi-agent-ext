@@ -56,11 +56,13 @@ thin-orchestrator/
 Symlink or copy the directory into `~/.pi/agent/extensions/`:
 
 ```bash
-# clone anywhere you like, e.g. ~/Project
-ln -s ~/Project/pi-agent-ext/extensions/thin-orchestrator ~/.pi/agent/extensions/thin-orchestrator
+# from repo root:
+ln -s "$(pwd)/extensions/thin-orchestrator" ~/.pi/agent/extensions/thin-orchestrator
+# or from this directory:
+# ln -s "$(pwd)" ~/.pi/agent/extensions/thin-orchestrator
 ```
 
-Then run `/reload` inside Pi (or test directly with `pi -e ~/Project/pi-agent-ext/extensions/thin-orchestrator/index.ts`).
+Then run `/reload` inside Pi (or test directly with `pi -e ./index.ts`).
 
 ## Usage
 

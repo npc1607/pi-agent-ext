@@ -535,6 +535,9 @@ async function styledConfirm(
 }
 
 export default function (pi: ExtensionAPI) {
+  // Allow isolated specialist subagents spawned by thin-orchestrator to execute within their scoped tools.
+  if (process.env.PI_ORCHESTRATOR_SUBAGENT === "1") return;
+
   pi.on("tool_call", async (event, ctx) => {
     // Both edit and write always require explicit user approval.
     if (event.toolName === "edit" || event.toolName === "write") {
