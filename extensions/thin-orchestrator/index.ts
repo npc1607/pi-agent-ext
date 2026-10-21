@@ -30,6 +30,7 @@ import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { autoDiscoverWorkspace, discoverCatalog, formatWorkspaceSummary } from "./discovery.ts";
 import { getFinalAssistantText, isStageFailed, runThinOrchestratorProtocol } from "./runner.ts";
+import { spinningFrame, stopSpinner, type SpinnerRendererState } from "./spinner.ts";
 import type { AgentScope, OrchestratorDetails, ProtocolStepRecord, StageResult, UsageStats } from "./types.ts";
 
 const COLLAPSED_TOOL_LIMIT = 6;
@@ -135,7 +136,7 @@ function formatToolCall(
 	}
 }
 
-function renderProtocolBar(steps: ProtocolStepRecord[], theme: any): string {
+function renderProtocolBar(steps: ProtocolStepRecord[], theme: any, runningGlyph: string): string {
 	return steps
 		.map((s) => {
 			const icon =
@@ -144,7 +145,7 @@ function renderProtocolBar(steps: ProtocolStepRecord[], theme: any): string {
 					: s.status === "failed"
 						? theme.fg("error", "✗")
 						: s.status === "running"
-							? theme.fg("warning", "⏳")
+							? runningGlyph
 							: theme.fg("muted", "○");
 			const labelColor = s.deterministic ? "dim" : "accent";
 			return `${icon}${theme.fg(labelColor, `${s.step}.${s.name}`)}`;
@@ -288,7 +289,13 @@ export default function (pi: ExtensionAPI) {
 			return new Text(`${header}\n  ${theme.fg("dim", taskPreview)}`, 0, 0);
 		},
 
-		renderResult(result, { expanded }, theme, _context) {
+		renderResult(result, { expanded, isPartial }, theme, context) {
+			const rendererState = context.state as SpinnerRendererState | undefined;
+			// Stop the ticker before any early return (e.g. abort path synthesizes
+			// a final result without details) so the interval can't leak and loop
+			// invalidate() forever on this tool row.
+			if (isPartial !== true) stopSpinner(rendererState);
+
 			const details = result.details as OrchestratorDetails | undefined;
 			if (!details) {
 				const text = result.content[0];
@@ -301,9 +308,15 @@ export default function (pi: ExtensionAPI) {
 			const failedStages = details.results.filter((r) => r.exitCode !== -1 && isStageFailed(r)).length;
 			const runningStages = details.results.filter((r) => r.exitCode === -1).length;
 
+			const animate = isPartial === true && runningStages > 0;
+			if (!animate) stopSpinner(rendererState);
+			const runningGlyph = animate
+				? theme.fg("warning", spinningFrame(rendererState, () => context.invalidate()))
+				: theme.fg("warning", "⏳");
+
 			const topIcon =
 				runningStages > 0
-					? theme.fg("warning", "⏳")
+					? runningGlyph
 					: failedStages > 0 || details.protocolSteps.some((s) => s.status === "failed")
 						? theme.fg("error", "✗")
 						: theme.fg("success", "✓");
@@ -320,7 +333,7 @@ export default function (pi: ExtensionAPI) {
 				`${theme.fg("accent", titleLabel)} ` +
 				`${theme.fg("muted", `[${completedStages}/${totalStages} stages]`)}`;
 
-			const protocolLine = renderProtocolBar(details.protocolSteps, theme);
+			const protocolLine = renderProtocolBar(details.protocolSteps, theme, runningGlyph);
 
 			if (expanded) {
 				const container = new Container();
@@ -336,7 +349,7 @@ export default function (pi: ExtensionAPI) {
 							: s.status === "failed"
 								? theme.fg("error", "✗")
 								: s.status === "running"
-									? theme.fg("warning", "⏳")
+									? runningGlyph
 									: theme.fg("muted", "○");
 					const kindTag = s.deterministic ? theme.fg("muted", "[DET]") : theme.fg("accent", "[LLM]");
 					const dur = s.durationMs !== undefined ? theme.fg("dim", ` (${s.durationMs}ms)`) : "";
@@ -349,7 +362,7 @@ export default function (pi: ExtensionAPI) {
 					const rFailed = r.exitCode !== -1 && isStageFailed(r);
 					const rIcon =
 						r.exitCode === -1
-							? theme.fg("warning", "⏳")
+							? runningGlyph
 							: rFailed
 								? theme.fg("error", "✗")
 								: theme.fg("success", "✓");
@@ -413,7 +426,7 @@ export default function (pi: ExtensionAPI) {
 				const rFailed = r.exitCode !== -1 && isStageFailed(r);
 				const rIcon =
 					r.exitCode === -1
-						? theme.fg("warning", "⏳")
+						? runningGlyph
 						: rFailed
 							? theme.fg("error", "✗")
 							: theme.fg("success", "✓");
