@@ -18,7 +18,7 @@ Mirrors the layout of `~/.pi/agent/`, so any subdirectory can be symlinked direc
 
 ## Skills
 
-Synced from `~/.pi/agent/skills/` — see [`skills/`](skills/). Includes Go style/review/testing skill suite, dev-doc-workflow, excalidraw-diagram, lsp-mcp-server, obsidian-skills, and taste-skill (frontend design). To use them, symlink or copy the skill you want into `~/.pi/agent/skills/`.
+Synced from `~/.pi/agent/skills/` — see [`skills/`](skills/). Includes Go style/review/testing skill suite, dev-doc (tech design doc / TODO / test-submission writing with business-language impact discipline), excalidraw-diagram, lsp-mcp-server, obsidian-skills, and taste-skill (frontend design). To use them, symlink or copy the skill you want into `~/.pi/agent/skills/`.
 
 ## Extensions
 
