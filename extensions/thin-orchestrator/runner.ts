@@ -66,6 +66,9 @@ export function isStageFailed(stage: StageResult): boolean {
 
 export function getStageOutput(stage: StageResult): string {
 	if (isStageFailed(stage)) {
+		if (stage.exitCode !== 0 || stage.stopReason === "error" || stage.stopReason === "aborted") {
+			return stage.errorMessage || stage.stderr || getFinalAssistantText(stage.messages) || `Process exited with code ${stage.exitCode}`;
+		}
 		if (stage.gateCmd && stage.gatePassed === false) {
 			return `Gate failed (${stage.gateCmd}):\n${stage.gateOutput || "(no gate output)"}`;
 		}
