@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#495057" />
+    </marker>
+    <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#e03131" />
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; fill: #868e96; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; fill: #2b2b2b; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 600; fill: #495057; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
+
+  <g transform="translate(590, 50)" text-anchor="middle">
+    <text class="title" font-size="30" y="0">文档原地编辑流程</text>
+    <text class="subtitle" font-size="16" y="32">解析 → 读块树 → 定位 block_id → 选工具改 → 限频保护</text>
+  </g>
+
+  <!-- 卡片 -->
+  
+    <g transform="translate(40, 140)" filter="url(#shadow)">
+      <rect width="320" height="190" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#0ca678">① 解析文档</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">feishu_resolve_doc</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• wiki 链接 / wiki token</text>
+        <text y="28">• docx 文档 ID</text>
+        <text y="56">• → 统一文档 ID</text>
+      </g>
+    </g>
+
+    <g transform="translate(430, 140)" filter="url(#shadow)">
+      <rect width="320" height="190" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#0ca678">② 读块树</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">feishu_read_document</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 标题 + 完整块树</text>
+        <text y="28">• block_id / 类型 / 下标</text>
+        <text y="56">• include_style 可选样式</text>
+      </g>
+    </g>
+
+    <g transform="translate(820, 140)" filter="url(#shadow)">
+      <rect width="320" height="190" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#1971c2">③ 定位目标块</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">blocks[].block_id</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• children 缺失也不压缩下标</text>
+        <text y="28">• index 可直接喂给插入工具</text>
+        <text y="56">• title_block_id 即文档标题</text>
+      </g>
+    </g>
+
+    <g transform="translate(820, 430)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#7048e8">④ 原地修改</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">update_block / patch_block</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 整段覆盖：ID 与位置不变</text>
+        <text y="28">• 段内替换：保住其余格式</text>
+        <text y="56">• spans：加粗 / 链接 / 行内代码</text>
+      </g>
+    </g>
+
+    <g transform="translate(430, 430)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#1971c2">⑤ 增删换块</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">insert / delete / replace</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• index 任意位置插入</text>
+        <text y="28">• children 嵌套列表 / 高亮块</text>
+        <text y="56">• replace = 插新删旧（ID 会变）</text>
+      </g>
+    </g>
+
+    <g transform="translate(40, 430)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#e8590c">⑥ 批量与预检</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">feishu_edit_document</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 多步 operations 一次提交</text>
+        <text y="28">• dry_run=true 先预演</text>
+        <text y="56">• 整篇结构调整走这条</text>
+      </g>
+    </g>
+
+  <!-- 连线与标签 -->
+  
+    <g>
+      <path d="M 360 235 L 430 235" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="370" y="207" width="50" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="395" y="221" text-anchor="middle">ref</text>
+    </g>
+
+    <g>
+      <path d="M 750 235 L 820 235" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="745" y="207" width="80" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="785" y="221" text-anchor="middle">block_id</text>
+    </g>
+
+    <g>
+      <path d="M 980 330 L 980 410" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="980" y="359" width="60" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="1010" y="373" text-anchor="middle">选工具</text>
+    </g>
+
+    <g>
+      <path d="M 820 530 L 750 530" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="765" y="502" width="40" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="785" y="516" text-anchor="middle">或</text>
+    </g>
+
+    <g>
+      <path d="M 430 530 L 360 530" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="375" y="502" width="40" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="395" y="516" text-anchor="middle">或</text>
+    </g>
+
+  <!-- 配置驱动底框 -->
+  
+    <g transform="translate(40, 680)" filter="url(#red-shadow)">
+      <rect width="1100" height="170" rx="16" fill="#fff5f5" stroke="#e03131" stroke-width="2.5"/>
+      <text class="card-title" x="550" y="36" text-anchor="middle" fill="#c92a2a" font-size="22">限频与写入安全</text>
+      <text class="card-sub" x="550" y="58" text-anchor="middle" font-size="14">单应用 3 QPS · 单文档并发 3 QPS</text>
+      <line x1="30" y1="74" x2="1070" y2="74" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(35, 104)" font-size="15">
+        <text y="0">• <tspan font-weight="700">写请求最小间隔 360ms</tspan>，自己先排队，避免打满 3 QPS</text>
+        <text y="28">• <tspan font-weight="700">命中限频</tspan>（99991400 / 1254290 / 1061045 / 429）：指数退避重试，最多 5 次，单次上限 8s</text>
+        <text y="56">• <tspan font-weight="700">写请求网络中断不重试</tspan>：结果未知，重试会建出重复块 —— 报错并提示先读文档确认</text>
+      </g>
+    </g>
+</svg>

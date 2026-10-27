@@ -1,0 +1,178 @@
+{
+  "title": "feishu-mcp 整体架构",
+  "subtitle": "12 个 MCP 工具 · stdio 协议 · 飞书开放平台能力封装",
+  "width": 1180,
+  "height": 900,
+  "cards": [
+    {
+      "title": "MCP 客户端",
+      "sub": "pi / Cursor / Claude / Qoder",
+      "theme": "gray",
+      "x": 40,
+      "y": 140,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "stdio JSON-RPC 2.0",
+        "工具发现与调用",
+        "codemode 或 directTools"
+      ]
+    },
+    {
+      "title": "mcpserver 层",
+      "sub": "internal/mcpserver",
+      "theme": "blue",
+      "x": 430,
+      "y": 140,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "tools.go：12 个工具",
+        "schema.go：递归 block",
+        "未知字段直接拒绝"
+      ]
+    },
+    {
+      "title": "业务层",
+      "sub": "internal/feishu",
+      "theme": "purple",
+      "x": 820,
+      "y": 140,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "doc：解析 / 读块树",
+        "edit：增删改 / 批量编辑",
+        "media：图片 / 画板流程图"
+      ]
+    },
+    {
+      "title": "HTTP 客户端",
+      "sub": "client.go",
+      "theme": "orange",
+      "x": 820,
+      "y": 430,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "360ms 写请求间隔",
+        "指数退避重试",
+        "token 缓存自动刷新"
+      ]
+    },
+    {
+      "title": "飞书开放平台",
+      "sub": "open.feishu.cn / open-apis",
+      "theme": "green",
+      "x": 40,
+      "y": 430,
+      "w": 730,
+      "h": 235,
+      "items": [
+        "im /v1/messages：机器人发消息（私聊 / 群聊）",
+        "docx /v1/documents：块树读写、插入、更新、删除",
+        "wiki /v2/spaces：知识库节点解析成文档 ID",
+        "board /v1/whiteboards：画板节点（PlantUML 流程图）",
+        "drive /v1/medias：图片上传换取 file_token"
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "startX": 360,
+      "startY": 240,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          70,
+          0
+        ]
+      ],
+      "label": "工具调用",
+      "labelPos": {
+        "x": 395,
+        "y": 226,
+        "w": 76
+      }
+    },
+    {
+      "startX": 750,
+      "startY": 240,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          70,
+          0
+        ]
+      ],
+      "label": "业务函数",
+      "labelPos": {
+        "x": 785,
+        "y": 226,
+        "w": 76
+      }
+    },
+    {
+      "startX": 980,
+      "startY": 340,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          90
+        ]
+      ],
+      "label": "HTTP",
+      "labelPos": {
+        "x": 1010,
+        "y": 383,
+        "w": 50
+      }
+    },
+    {
+      "startX": 820,
+      "startY": 530,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -50,
+          0
+        ]
+      ],
+      "label": "REST",
+      "labelPos": {
+        "x": 795,
+        "y": 497,
+        "w": 50
+      }
+    }
+  ],
+  "configBoxes": [
+    {
+      "title": "配置与权限",
+      "sub": "凭据装载 · 必需 scope",
+      "theme": "red",
+      "x": 40,
+      "y": 680,
+      "w": 1100,
+      "h": 170,
+      "items": [
+        "**凭据优先级**：FEISHU_APP_ID/SECRET → FEISHU_CONFIG → 二进制同目录 config.json → 当前工作目录 config.json",
+        "**文档权限**：im:message:send_as_bot · docx:document:write_only · docx:document:readonly · wiki:node:read",
+        "**扩展能力**：docs:document.media:upload（图片）· board:whiteboard:node:create（流程图）"
+      ]
+    }
+  ]
+}

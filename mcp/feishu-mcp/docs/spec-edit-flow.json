@@ -1,0 +1,210 @@
+{
+  "title": "文档原地编辑流程",
+  "subtitle": "解析 → 读块树 → 定位 block_id → 选工具改 → 限频保护",
+  "width": 1180,
+  "height": 900,
+  "cards": [
+    {
+      "title": "① 解析文档",
+      "sub": "feishu_resolve_doc",
+      "theme": "green",
+      "x": 40,
+      "y": 140,
+      "w": 320,
+      "h": 190,
+      "items": [
+        "wiki 链接 / wiki token",
+        "docx 文档 ID",
+        "→ 统一文档 ID"
+      ]
+    },
+    {
+      "title": "② 读块树",
+      "sub": "feishu_read_document",
+      "theme": "green",
+      "x": 430,
+      "y": 140,
+      "w": 320,
+      "h": 190,
+      "items": [
+        "标题 + 完整块树",
+        "block_id / 类型 / 下标",
+        "include_style 可选样式"
+      ]
+    },
+    {
+      "title": "③ 定位目标块",
+      "sub": "blocks[].block_id",
+      "theme": "blue",
+      "x": 820,
+      "y": 140,
+      "w": 320,
+      "h": 190,
+      "items": [
+        "children 缺失也不压缩下标",
+        "index 可直接喂给插入工具",
+        "title_block_id 即文档标题"
+      ]
+    },
+    {
+      "title": "④ 原地修改",
+      "sub": "update_block / patch_block",
+      "theme": "purple",
+      "x": 820,
+      "y": 430,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "整段覆盖：ID 与位置不变",
+        "段内替换：保住其余格式",
+        "spans：加粗 / 链接 / 行内代码"
+      ]
+    },
+    {
+      "title": "⑤ 增删换块",
+      "sub": "insert / delete / replace",
+      "theme": "blue",
+      "x": 430,
+      "y": 430,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "index 任意位置插入",
+        "children 嵌套列表 / 高亮块",
+        "replace = 插新删旧（ID 会变）"
+      ]
+    },
+    {
+      "title": "⑥ 批量与预检",
+      "sub": "feishu_edit_document",
+      "theme": "orange",
+      "x": 40,
+      "y": 430,
+      "w": 320,
+      "h": 200,
+      "items": [
+        "多步 operations 一次提交",
+        "dry_run=true 先预演",
+        "整篇结构调整走这条"
+      ]
+    }
+  ],
+  "arrows": [
+    {
+      "startX": 360,
+      "startY": 235,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          70,
+          0
+        ]
+      ],
+      "label": "ref",
+      "labelPos": {
+        "x": 395,
+        "y": 221,
+        "w": 50
+      }
+    },
+    {
+      "startX": 750,
+      "startY": 235,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          70,
+          0
+        ]
+      ],
+      "label": "block_id",
+      "labelPos": {
+        "x": 785,
+        "y": 221,
+        "w": 80
+      }
+    },
+    {
+      "startX": 980,
+      "startY": 330,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ]
+      ],
+      "label": "选工具",
+      "labelPos": {
+        "x": 1010,
+        "y": 373,
+        "w": 60
+      }
+    },
+    {
+      "startX": 820,
+      "startY": 530,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -70,
+          0
+        ]
+      ],
+      "label": "或",
+      "labelPos": {
+        "x": 785,
+        "y": 516,
+        "w": 40
+      }
+    },
+    {
+      "startX": 430,
+      "startY": 530,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -70,
+          0
+        ]
+      ],
+      "label": "或",
+      "labelPos": {
+        "x": 395,
+        "y": 516,
+        "w": 40
+      }
+    }
+  ],
+  "configBoxes": [
+    {
+      "title": "限频与写入安全",
+      "sub": "单应用 3 QPS · 单文档并发 3 QPS",
+      "theme": "red",
+      "x": 40,
+      "y": 680,
+      "w": 1100,
+      "h": 170,
+      "items": [
+        "**写请求最小间隔 360ms**，自己先排队，避免打满 3 QPS",
+        "**命中限频**（99991400 / 1254290 / 1061045 / 429）：指数退避重试，最多 5 次，单次上限 8s",
+        "**写请求网络中断不重试**：结果未知，重试会建出重复块 —— 报错并提示先读文档确认"
+      ]
+    }
+  ]
+}

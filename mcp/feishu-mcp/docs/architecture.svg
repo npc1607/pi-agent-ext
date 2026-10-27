@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#495057" />
+    </marker>
+    <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#e03131" />
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; fill: #868e96; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; fill: #2b2b2b; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 600; fill: #495057; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
+
+  <g transform="translate(590, 50)" text-anchor="middle">
+    <text class="title" font-size="30" y="0">feishu-mcp 整体架构</text>
+    <text class="subtitle" font-size="16" y="32">12 个 MCP 工具 · stdio 协议 · 飞书开放平台能力封装</text>
+  </g>
+
+  <!-- 卡片 -->
+  
+    <g transform="translate(40, 140)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#f8f9fa" stroke="#868e96" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#212529">MCP 客户端</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">pi / Cursor / Claude / Qoder</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#dee2e6" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• stdio JSON-RPC 2.0</text>
+        <text y="28">• 工具发现与调用</text>
+        <text y="56">• codemode 或 directTools</text>
+      </g>
+    </g>
+
+    <g transform="translate(430, 140)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#1971c2">mcpserver 层</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">internal/mcpserver</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• tools.go：12 个工具</text>
+        <text y="28">• schema.go：递归 block</text>
+        <text y="56">• 未知字段直接拒绝</text>
+      </g>
+    </g>
+
+    <g transform="translate(820, 140)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#7048e8">业务层</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">internal/feishu</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• doc：解析 / 读块树</text>
+        <text y="28">• edit：增删改 / 批量编辑</text>
+        <text y="56">• media：图片 / 画板流程图</text>
+      </g>
+    </g>
+
+    <g transform="translate(820, 430)" filter="url(#shadow)">
+      <rect width="320" height="200" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="160" y="36" text-anchor="middle" fill="#e8590c">HTTP 客户端</text>
+      <text class="card-sub" x="160" y="56" text-anchor="middle">client.go</text>
+      <line x1="25" y1="72" x2="295" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 360ms 写请求间隔</text>
+        <text y="28">• 指数退避重试</text>
+        <text y="56">• token 缓存自动刷新</text>
+      </g>
+    </g>
+
+    <g transform="translate(40, 430)" filter="url(#shadow)">
+      <rect width="730" height="235" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="365" y="36" text-anchor="middle" fill="#0ca678">飞书开放平台</text>
+      <text class="card-sub" x="365" y="56" text-anchor="middle">open.feishu.cn / open-apis</text>
+      <line x1="25" y1="72" x2="705" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• im /v1/messages：机器人发消息（私聊 / 群聊）</text>
+        <text y="28">• docx /v1/documents：块树读写、插入、更新、删除</text>
+        <text y="56">• wiki /v2/spaces：知识库节点解析成文档 ID</text>
+        <text y="84">• board /v1/whiteboards：画板节点（PlantUML 流程图）</text>
+        <text y="112">• drive /v1/medias：图片上传换取 file_token</text>
+      </g>
+    </g>
+
+  <!-- 连线与标签 -->
+  
+    <g>
+      <path d="M 360 240 L 430 240" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="357" y="212" width="76" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="395" y="226" text-anchor="middle">工具调用</text>
+    </g>
+
+    <g>
+      <path d="M 750 240 L 820 240" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="747" y="212" width="76" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="785" y="226" text-anchor="middle">业务函数</text>
+    </g>
+
+    <g>
+      <path d="M 980 340 L 980 430" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="985" y="369" width="50" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="1010" y="383" text-anchor="middle">HTTP</text>
+    </g>
+
+    <g>
+      <path d="M 820 530 L 770 530" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="770" y="483" width="50" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="795" y="497" text-anchor="middle">REST</text>
+    </g>
+
+  <!-- 配置驱动底框 -->
+  
+    <g transform="translate(40, 680)" filter="url(#red-shadow)">
+      <rect width="1100" height="170" rx="16" fill="#fff5f5" stroke="#e03131" stroke-width="2.5"/>
+      <text class="card-title" x="550" y="36" text-anchor="middle" fill="#c92a2a" font-size="22">配置与权限</text>
+      <text class="card-sub" x="550" y="58" text-anchor="middle" font-size="14">凭据装载 · 必需 scope</text>
+      <line x1="30" y1="74" x2="1070" y2="74" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(35, 104)" font-size="15">
+        <text y="0">• <tspan font-weight="700">凭据优先级</tspan>：FEISHU_APP_ID/SECRET → FEISHU_CONFIG → 二进制同目录 config.json → 当前工作目录 config.json</text>
+        <text y="28">• <tspan font-weight="700">文档权限</tspan>：im:message:send_as_bot · docx:document:write_only · docx:document:readonly · wiki:node:read</text>
+        <text y="56">• <tspan font-weight="700">扩展能力</tspan>：docs:document.media:upload（图片）· board:whiteboard:node:create（流程图）</text>
+      </g>
+    </g>
+</svg>

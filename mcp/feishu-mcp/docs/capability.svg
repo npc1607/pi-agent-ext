@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 780" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#495057" />
+    </marker>
+    <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#e03131" />
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; fill: #868e96; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; fill: #2b2b2b; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 600; fill: #495057; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
+
+  <g transform="translate(590, 50)" text-anchor="middle">
+    <text class="title" font-size="30" y="0">能力边界：能做的 / 要绕路的 / 做不到的</text>
+    <text class="subtitle" font-size="16" y="32">飞书 docx 接口能覆盖的范围，以及每个坑的替代路径</text>
+  </g>
+
+  <!-- 卡片 -->
+  
+    <g transform="translate(40, 140)" filter="url(#shadow)">
+      <rect width="350" height="340" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="175" y="36" text-anchor="middle" fill="#0ca678">直接支持</text>
+      <text class="card-sub" x="175" y="56" text-anchor="middle">一个工具调用搞定</text>
+      <line x1="25" y1="72" x2="325" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 原地改文本 / 内联样式</text>
+        <text y="28">• 段内替换，保住其余格式</text>
+        <text y="56">• 任意下标插入 + 嵌套子块</text>
+        <text y="84">• todo 勾选 / 代码语言 / 折叠</text>
+        <text y="112">• 对齐 / 引用 / 分栏 / 高亮块</text>
+        <text y="140">• 表格创建与单元格文字</text>
+        <text y="168">• 图片上传（≤20MB）</text>
+        <text y="196">• 改文档标题（title 块）</text>
+      </g>
+    </g>
+
+    <g transform="translate(415, 140)" filter="url(#shadow)">
+      <rect width="350" height="340" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="175" y="36" text-anchor="middle" fill="#e8590c">需要绕路</text>
+      <text class="card-sub" x="175" y="56" text-anchor="middle">等价方案，有代价</text>
+      <line x1="25" y1="72" x2="325" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 改 block_type → replace_block</text>
+        <text y="28">• 位置不变，但 block_id 会变</text>
+        <text y="56">• 流程图 → board 画板 + PlantUML</text>
+        <text y="84">• 画板精确坐标 → 直接调节点接口</text>
+        <text y="112">• 文本 + 样式 → 客户端分两次下发</text>
+        <text y="140">• 表格单元格 → 改嵌套 text 块</text>
+      </g>
+    </g>
+
+    <g transform="translate(790, 140)" filter="url(#shadow)">
+      <rect width="350" height="340" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
+      <text class="card-title" x="175" y="36" text-anchor="middle" fill="#c92a2a">接口不支持</text>
+      <text class="card-sub" x="175" y="56" text-anchor="middle">报错码即结论</text>
+      <line x1="25" y1="72" x2="325" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 电子表格 / 多维表格未封装</text>
+        <text y="28">• 原生 diagram 块无法创建</text>
+        <text y="56">• 未知字段 / 缺 type 直接拒绝</text>
+        <text y="84">• 机器人非协作者 → 1770032</text>
+        <text y="112">• 普通段落设 folded → 1770024</text>
+        <text y="140">• 同请求改文本+样式 → 1770001</text>
+      </g>
+    </g>
+
+  <!-- 连线与标签 -->
+  
+
+  <!-- 配置驱动底框 -->
+  
+    <g transform="translate(40, 530)" filter="url(#red-shadow)">
+      <rect width="1100" height="190" rx="16" fill="#e7f5ff" stroke="#1971c2" stroke-width="2.5"/>
+      <text class="card-title" x="550" y="36" text-anchor="middle" fill="#1971c2" font-size="22">三个设计取舍</text>
+      <text class="card-sub" x="550" y="58" text-anchor="middle" font-size="14">先看这三条，再查工具表</text>
+      <line x1="30" y1="74" x2="1070" y2="74" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(35, 104)" font-size="15">
+        <text y="0">• <tspan font-weight="700">强类型入参</tspan>：字段名必须与 schema 完全一致，拼错即失败，请求不会打到飞书（错误为 SDK 的英文 schema 栈）</text>
+        <text y="28">• <tspan font-weight="700">下标保真</tspan>：父块 children 里缺失的块只跳过、不压缩下标，读到的 index 可直接用于 feishu_insert_blocks</text>
+        <text y="56">• <tspan font-weight="700">幂等优先</tspan>：写请求失败不自动重试（结果未知，重试会建重复块）；整篇调整先用 dry_run=true 预演</text>
+      </g>
+    </g>
+</svg>
