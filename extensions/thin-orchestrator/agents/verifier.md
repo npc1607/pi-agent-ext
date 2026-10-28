@@ -20,7 +20,9 @@ Loaded at runtime from `knowledge/verification-checklist.md`.
 1. Inspect `git status --short` and `git diff --stat` to identify affected packages/modules.
 2. Run the appropriate build/typecheck command for the repository stack.
 3. Run targeted unit tests covering the modified packages.
-4. Report a structured verification report ending with `GATE_STATUS: PASS` or `GATE_STATUS: FAIL`.
+4. Report a structured verification report whose **final line** is exactly `GATE_STATUS: PASS` or `GATE_STATUS: FAIL`.
+
+> The orchestrator parses a line-anchored `GATE_STATUS:` verdict from your final message and treats `FAIL` as a stage failure even when your process exited `0`. Emit it exactly once, on its own final line, and never quote or echo this contract.
 
 ## 4. Discovery Patterns
 - Do not modify production code; only execute verification commands and report diagnostics.

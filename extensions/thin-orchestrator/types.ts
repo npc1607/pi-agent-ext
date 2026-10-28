@@ -41,8 +41,41 @@ export interface WorkflowStep {
 	taskTemplate: string;
 	/** Optional deterministic shell command that must exit 0 after this stage completes. */
 	gateCmd?: string;
+	/**
+	 * Timeout in milliseconds for `gateCmd` (default: 30000, clamped to 1000..1800000).
+	 * Long-running suites (e.g. `go test ./...`) must raise this explicitly.
+	 */
+	gateTimeoutMs?: number;
 	/** Number of automatic retries if the specialist or its post-stage gate fails (default: 1). */
 	maxRetries?: number;
+	/**
+	 * Repair loop: when this stage still fails after its own retries, jump back to an earlier
+	 * stage in the same workflow, pass the failure output to it, and re-run the chain from there.
+	 * Only honored in sequential (workflow/single) mode; ignored in parallel mode.
+	 */
+	onGateFail?: {
+		/** `id` of an earlier step in the same workflow to re-run. */
+		retryFrom: string;
+		/** Maximum loop-backs for this stage (default: 1, clamped to 0..3). 0 disables looping. */
+		maxLoops?: number;
+	};
+}
+
+/**
+ * Deterministic Gather (Step 3) prompt definition for a required field.
+ * When `options` is present the user picks from a selector instead of typing free text.
+ */
+export interface FieldPrompt {
+	/** Dialog title, e.g. `接口鉴权方式`. Defaults to `[Thin Orchestrator] Required field "<name>"`. */
+	title?: string;
+	/** Choice list rendered through `ctx.ui.select`. Omit for a free-text input. */
+	options?: string[];
+	/** Placeholder / hint shown for free-text input. */
+	placeholder?: string;
+	/** Fallback value used when no interactive UI is available (print/json modes). */
+	default?: string;
+	/** Treat the value as a secret: redact it from the protocol audit, progress stream, and tool result. */
+	secret?: boolean;
 }
 
 /**
@@ -52,6 +85,8 @@ export interface WorkflowTemplate {
 	name: string;
 	description: string;
 	requiredFields: string[];
+	/** Optional per-field Gather (Step 3) prompts, keyed by field name. */
+	fieldPrompts?: Record<string, FieldPrompt>;
 	/** Deterministic pre-flight shell checks run at Step 2 before any LLM call. */
 	preChecks: string[];
 	steps: WorkflowStep[];
@@ -114,6 +149,8 @@ export interface StageResult {
 	gateCmd?: string;
 	gatePassed?: boolean;
 	gateOutput?: string;
+	/** Explicit `GATE_STATUS: PASS|FAIL` line reported by the specialist in its final message. */
+	reportedGateStatus?: "PASS" | "FAIL";
 }
 
 export interface OrchestratorDetails {

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
-import type { AgentScope, SpecialistAgent, WorkflowStep, WorkflowTemplate, WorkspaceDiscovery } from "./types.ts";
+import type { AgentScope, FieldPrompt, SpecialistAgent, WorkflowStep, WorkflowTemplate, WorkspaceDiscovery } from "./types.ts";
 
 const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,6 +102,40 @@ function loadSpecialistsFromDir(dir: string, source: "builtin" | "user" | "proje
 	return specialists;
 }
 
+/**
+ * Parse the optional `fieldPrompts` map of a workflow definition (Step 3 Gather prompts).
+ * Invalid entries are dropped rather than failing the whole workflow load.
+ */
+function parseFieldPrompts(raw: unknown): Record<string, FieldPrompt> | undefined {
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+
+	const result: Record<string, FieldPrompt> = {};
+	for (const [fieldName, value] of Object.entries(raw as Record<string, unknown>)) {
+		if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+		const item = value as Record<string, unknown>;
+
+		const options = Array.isArray(item.options)
+			? item.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0).map((o) => o.trim())
+			: undefined;
+		const title = typeof item.title === "string" && item.title.trim() ? item.title.trim() : undefined;
+		const placeholder =
+			typeof item.placeholder === "string" && item.placeholder.trim() ? item.placeholder.trim() : undefined;
+		const defaultValue = typeof item.default === "string" && item.default.trim() ? item.default.trim() : undefined;
+
+		if (!title && !options?.length && !placeholder && !defaultValue) continue;
+
+		result[fieldName] = {
+			title,
+			options: options?.length ? options : undefined,
+			placeholder,
+			default: defaultValue,
+			secret: item.secret === true || item.secret === "true",
+		};
+	}
+
+	return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function loadWorkflowsFromDir(dir: string, source: "builtin" | "user" | "project"): WorkflowTemplate[] {
 	if (!isDirectory(dir)) return [];
 
@@ -128,21 +162,46 @@ function loadWorkflowsFromDir(dir: string, source: "builtin" | "user" | "project
 			for (let i = 0; i < raw.steps.length; i++) {
 				const item = raw.steps[i] as Record<string, unknown>;
 				if (!item || typeof item.agent !== "string" || typeof item.taskTemplate !== "string") continue;
+				const onGateFailRaw =
+					item.onGateFail && typeof item.onGateFail === "object"
+						? (item.onGateFail as Record<string, unknown>)
+						: undefined;
+				const retryFrom =
+					typeof onGateFailRaw?.retryFrom === "string" && onGateFailRaw.retryFrom.trim()
+						? onGateFailRaw.retryFrom.trim()
+						: undefined;
+
 				steps.push({
 					id: typeof item.id === "string" && item.id.trim() ? item.id.trim() : `step_${i + 1}`,
 					agent: item.agent.trim(),
 					taskTemplate: item.taskTemplate,
 					gateCmd: typeof item.gateCmd === "string" && item.gateCmd.trim() ? item.gateCmd.trim() : undefined,
+					gateTimeoutMs:
+						typeof item.gateTimeoutMs === "number" && Number.isFinite(item.gateTimeoutMs)
+							? Math.max(1_000, Math.min(1_800_000, Math.round(item.gateTimeoutMs)))
+							: undefined,
 					maxRetries: typeof item.maxRetries === "number" ? Math.max(0, Math.min(3, item.maxRetries)) : 1,
+					onGateFail: retryFrom
+						? {
+								retryFrom,
+								maxLoops:
+									typeof onGateFailRaw?.maxLoops === "number"
+										? Math.max(0, Math.min(3, Math.round(onGateFailRaw.maxLoops)))
+										: 1,
+							}
+						: undefined,
 				});
 			}
 
 			if (steps.length === 0) continue;
 
+			const fieldPrompts = parseFieldPrompts(raw.fieldPrompts);
+
 			workflows.push({
 				name: raw.name.trim(),
 				description: raw.description.trim(),
 				requiredFields: parseStringList(raw.requiredFields),
+				fieldPrompts,
 				preChecks: parseStringList(raw.preChecks),
 				steps,
 				source,

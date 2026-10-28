@@ -207,7 +207,7 @@ export default function (pi: ExtensionAPI) {
 		description: [
 			"Deterministic Thin Orchestrator following Meta's 7-Step Protocol (Read -> Check -> Gather -> Auto-discover -> Reliability Gate -> Delegate -> Handle).",
 			"Performs zero domain reasoning itself: routes work through deterministic workflow state machines (`workflow`) or isolated domain specialists (`agent` / `tasks`), loading specialist knowledge files on demand at runtime.",
-			"Built-in workflows: `bugfix` (scout->planner->implementer->verifier->reviewer), `feature` (scout->planner->implementer->verifier->reviewer), `scout-and-plan` (scout->planner), `review-and-fix` (reviewer->implementer->verifier).",
+			"Built-in workflows: `bugfix` (scout->planner->implementer->verifier->reviewer), `feature` (scout->planner->implementer->verifier->reviewer), `scout-and-plan` (scout->planner), `review-and-fix` (reviewer->implementer->verifier), `api-test` (scout->planner->api-test-author->verifier->reviewer for strongly-typed TypeScript HTTP API tests, asking the user for base URL / auth mechanism (request headers or JWT) / credential / regression scope via Step-3 selectors, with a repair loop back to api-test-author).",
 			"Built-in specialists: `scout`, `planner`, `implementer`, `verifier`, `reviewer`.",
 		].join(" "),
 		parameters: ThinOrchestratorParams,
@@ -376,12 +376,18 @@ export default function (pi: ExtensionAPI) {
 							? theme.fg("success", ` [GATE PASS: ${r.gateCmd}]`)
 							: theme.fg("error", ` [GATE FAIL: ${r.gateCmd}]`)
 						: "";
+					const signalBadge =
+						r.reportedGateStatus === "FAIL"
+							? theme.fg("error", " [SIGNAL: FAIL]")
+							: r.reportedGateStatus === "PASS"
+								? theme.fg("success", " [SIGNAL: PASS]")
+								: "";
 					const retryBadge = r.attempts > 1 ? theme.fg("warning", ` (attempt ${r.attempts})`) : "";
 
 					container.addChild(new Spacer(1));
 					container.addChild(
 						new Text(
-							`${theme.fg("muted", `─── Stage ${r.stepIndex} (${r.stepId}): `)}${theme.fg("accent", r.agent)} ${rIcon}${retryBadge}${kBadge}${gateBadge}`,
+							`${theme.fg("muted", `─── Stage ${r.stepIndex} (${r.stepId}): `)}${theme.fg("accent", r.agent)} ${rIcon}${retryBadge}${kBadge}${gateBadge}${signalBadge}`,
 							0,
 							0,
 						),

@@ -14,6 +14,7 @@ import {
 } from "./discovery.ts";
 import type {
 	AgentScope,
+	FieldPrompt,
 	OrchestratorDetails,
 	ProtocolStepRecord,
 	SpecialistAgent,
@@ -54,11 +55,32 @@ export function getFinalAssistantText(messages: Message[]): string {
 	return "";
 }
 
+/**
+ * Read the specialist's self-reported `GATE_STATUS: PASS|FAIL` verdict from its final message.
+ *
+ * Only a LINE-ANCHORED verdict counts, and the LAST one wins. This prevents a specialist that
+ * merely quotes the reporting contract (`ending with GATE_STATUS: PASS or GATE_STATUS: FAIL`)
+ * from being misread as a failure.
+ */
+export function getReportedGateStatus(messages: Message[]): "PASS" | "FAIL" | null {
+	const text = getFinalAssistantText(messages);
+	if (!text) return null;
+	const matches = Array.from(text.matchAll(/^[ \t>*_`-]*GATE_STATUS[ \t]*:[ \t]*[*_`\s]*(PASS|FAIL)\b/gim));
+	if (matches.length === 0) return null;
+	return matches[matches.length - 1]![1]!.toUpperCase() as "PASS" | "FAIL";
+}
+
 export function isStageFailed(stage: StageResult): boolean {
 	if (stage.exitCode !== 0 || stage.stopReason === "error" || stage.stopReason === "aborted") {
 		return true;
 	}
 	if (stage.gateCmd && stage.gatePassed === false) {
+		return true;
+	}
+	// A specialist that advertises an explicit verdict (e.g. the verifier) must not be overridden
+	// by an exit code of 0: `GATE_STATUS: FAIL` is a real failure even when the process exited cleanly.
+	const reported = stage.reportedGateStatus ?? getReportedGateStatus(stage.messages);
+	if (reported === "FAIL") {
 		return true;
 	}
 	return false;
@@ -72,9 +94,25 @@ export function getStageOutput(stage: StageResult): string {
 		if (stage.gateCmd && stage.gatePassed === false) {
 			return `Gate failed (${stage.gateCmd}):\n${stage.gateOutput || "(no gate output)"}`;
 		}
+		if (getReportedGateStatus(stage.messages) === "FAIL") {
+			return `Specialist reported GATE_STATUS: FAIL\n\n${getFinalAssistantText(stage.messages)}`;
+		}
 		return stage.errorMessage || stage.stderr || getFinalAssistantText(stage.messages) || "(no output)";
 	}
 	return getFinalAssistantText(stage.messages) || "(no output)";
+}
+
+/**
+ * Replace every known secret value with `***`. Used on anything that is displayed, aggregated,
+ * or handed to another specialist — never on the prompt that is actually spawned.
+ */
+export function redactSecrets(text: string, secretValues?: string[]): string {
+	if (!secretValues || secretValues.length === 0) return text;
+	let out = text;
+	for (const value of secretValues) {
+		if (value && value.length >= 4) out = out.split(value).join("***");
+	}
+	return out;
 }
 
 /**
@@ -166,6 +204,28 @@ export function renderTaskTemplate(
 }
 
 /**
+ * Step 6 (Delegate) executor signature. Exposed as an injection seam so the sequential state
+ * machine (in particular repair loops) can be driven deterministically without spawning
+ * real specialist subprocesses.
+ */
+export type StageExecutor = (opts: {
+	cwd: string;
+	projectConfigDir: string | null;
+	dispatchDefaults: DispatchDefaults;
+	specialist: SpecialistAgent;
+	stepIndex: number;
+	stepId: string;
+	taskPrompt: string;
+	gateCmd?: string;
+	gateTimeoutMs?: number;
+	attempt: number;
+	signal?: AbortSignal;
+	onProgress?: (currentStage: StageResult) => void;
+	/** Secret field values to redact from the stored/audited copy of the prompt. */
+	secretValues?: string[];
+}) => Promise<StageResult>;
+
+/**
  * Step 6 (Delegate): Spawn an isolated specialist `pi` subprocess with only its domain knowledge loaded.
  */
 export async function executeSpecialistStage(opts: {
@@ -177,9 +237,11 @@ export async function executeSpecialistStage(opts: {
 	stepId: string;
 	taskPrompt: string;
 	gateCmd?: string;
+	gateTimeoutMs?: number;
 	attempt: number;
 	signal?: AbortSignal;
 	onProgress?: (currentStage: StageResult) => void;
+	secretValues?: string[];
 }): Promise<StageResult> {
 	const {
 		cwd,
@@ -190,9 +252,11 @@ export async function executeSpecialistStage(opts: {
 		stepId,
 		taskPrompt,
 		gateCmd,
+		gateTimeoutMs,
 		attempt,
 		signal,
 		onProgress,
+		secretValues,
 	} = opts;
 
 	// Load domain knowledge files on demand at runtime (never in main orchestrator context)
@@ -224,7 +288,9 @@ export async function executeSpecialistStage(opts: {
 		stepId,
 		agent: specialist.name,
 		agentSource: specialist.source,
-		task: taskPrompt,
+		// The live prompt is spawned as-is; the audited copy is redacted so plaintext credentials
+		// gathered at Step 3 never surface in the TUI audit or the tool result.
+		task: redactSecrets(taskPrompt, secretValues),
 		knowledgeLoaded: [
 			...loadedPaths,
 			...specialist.skills.map((s) => `skill:${s}`),
@@ -342,9 +408,10 @@ export async function executeSpecialistStage(opts: {
 		}
 
 		// Deterministic post-stage reliability gate check
+		stageResult.reportedGateStatus = getReportedGateStatus(stageResult.messages) ?? undefined;
 		const effectiveGate = stageResult.gateCmd;
 		if (effectiveGate && exitCode === 0 && stageResult.stopReason !== "error") {
-			const gateRes = runDeterministicShellCheck(effectiveGate, cwd);
+			const gateRes = runDeterministicShellCheck(effectiveGate, cwd, gateTimeoutMs);
 			stageResult.gatePassed = gateRes.passed;
 			stageResult.gateOutput = gateRes.output;
 		} else if (effectiveGate) {
@@ -371,6 +438,17 @@ export async function executeSpecialistStage(opts: {
 }
 
 /**
+ * Render the allowed values for enumerated (selector-backed) gather fields, so a headless caller
+ * knows exactly which strings are accepted instead of guessing.
+ */
+function renderAllowedFieldValues(missingFields: string[], fieldPrompts: Record<string, FieldPrompt>): string {
+	const lines = missingFields
+		.filter((f) => fieldPrompts[f]?.options?.length)
+		.map((f) => `- \`${f}\`: ${fieldPrompts[f]!.options!.map((o) => `"${o}"`).join(" | ")}`);
+	return lines.length > 0 ? `\n\nAllowed values:\n${lines.join("\n")}` : "";
+}
+
+/**
  * Execute Meta's full 7-Step Thin Orchestrator Protocol for a workflow or single/parallel specialist delegation.
  */
 export async function runThinOrchestratorProtocol(opts: {
@@ -386,6 +464,8 @@ export async function runThinOrchestratorProtocol(opts: {
 	confirmProjectResources: boolean;
 	signal?: AbortSignal;
 	onUpdate?: OnOrchestratorUpdate;
+	/** Test/debug seam: override how a single specialist stage is executed (defaults to a real subprocess). */
+	stageExecutor?: StageExecutor;
 }): Promise<AgentToolResult<OrchestratorDetails>> {
 	const {
 		ctx,
@@ -422,6 +502,8 @@ export async function runThinOrchestratorProtocol(opts: {
 			details: makeDetails(),
 		});
 	};
+
+	const executeStage: StageExecutor = opts.stageExecutor ?? executeSpecialistStage;
 
 	const dispatchDefaults: DispatchDefaults = {
 		model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
@@ -506,6 +588,59 @@ export async function runThinOrchestratorProtocol(opts: {
 		referencedSpecialists.set(spec.name, spec);
 	}
 
+	// Deterministic workflow integrity checks: unique step ids, and repair loops that can only
+	// jump backwards (forward jumps would silently create infinite/undefined execution orders).
+	switch (mode) {
+		case "workflow": {
+			const seenStepIds = new Set<string>();
+			for (const step of resolvedSteps) {
+				if (seenStepIds.has(step.id)) {
+					protocolSteps[0].status = "failed";
+					protocolSteps[0].summary = `Duplicate step id "${step.id}" in workflow "${workflowName}"`;
+					return {
+						content: [
+							{
+								type: "text",
+								text: `[Step 1 Read Failed] Duplicate step id "${step.id}" in workflow "${workflowName}". Step ids must be unique because they are referenced by \`{step:<id>}\` placeholders and \`onGateFail.retryFrom\`.`,
+							},
+						],
+						details: makeDetails(),
+						isError: true,
+					};
+				}
+				seenStepIds.add(step.id);
+			}
+
+			for (let i = 0; i < resolvedSteps.length; i++) {
+				const step = resolvedSteps[i]!;
+				const directive = step.onGateFail;
+				if (!directive) continue;
+				const targetIndex = resolvedSteps.findIndex((s) => s.id === directive.retryFrom);
+				if (targetIndex < 0 || targetIndex >= i) {
+					protocolSteps[0].status = "failed";
+					protocolSteps[0].summary = `Invalid onGateFail.retryFrom "${directive.retryFrom}" on step "${step.id}"`;
+					return {
+						content: [
+							{
+								type: "text",
+								text: `[Step 1 Read Failed] Step "${step.id}" declares \`onGateFail.retryFrom: "${directive.retryFrom}"\`, which must reference an EARLIER step in the same workflow. Earlier step ids: ${resolvedSteps
+									.slice(0, i)
+									.map((s) => `\`${s.id}\``)
+									.join(", ") || "(none)"}.`,
+							},
+						],
+						details: makeDetails(),
+						isError: true,
+					};
+				}
+			}
+			break;
+		}
+		case "single":
+		case "parallel":
+			break;
+	}
+
 	const totalKnowledgeFiles = Array.from(referencedSpecialists.values()).reduce(
 		(acc, s) => acc + s.knowledgeFiles.length,
 		0,
@@ -572,20 +707,44 @@ export async function runThinOrchestratorProtocol(opts: {
 	}
 
 	const missingFields: string[] = [];
+	const fieldPrompts = resolvedWorkflow?.fieldPrompts ?? {};
+	let promptedFieldCount = 0;
+
 	for (const fieldName of requiredFieldNames) {
-		if (!gatheredFields[fieldName] || !gatheredFields[fieldName].trim()) {
-			if (ctx.hasUI) {
+		if (gatheredFields[fieldName] && gatheredFields[fieldName].trim()) continue;
+
+		const fieldPrompt = fieldPrompts[fieldName];
+		const dialogTitle = fieldPrompt?.title ?? `[Thin Orchestrator] Required field "${fieldName}"`;
+
+		if (ctx.hasUI) {
+			if (fieldPrompt?.options?.length) {
+				// Deterministic choice list: no free-text ambiguity for enumerated decisions
+				// (e.g. required request headers vs JWT token).
+				const picked = await ctx.ui.select(dialogTitle, fieldPrompt.options);
+				if (picked && picked.trim()) {
+					gatheredFields[fieldName] = picked.trim();
+					promptedFieldCount++;
+					continue;
+				}
+			} else {
 				const userVal = await ctx.ui.input(
-					`[Thin Orchestrator] Required field "${fieldName}"`,
-					`Enter value for "${fieldName}" before delegating:`,
+					dialogTitle,
+					fieldPrompt?.placeholder ?? `Enter value for "${fieldName}" before delegating:`,
 				);
 				if (userVal && userVal.trim()) {
 					gatheredFields[fieldName] = userVal.trim();
+					promptedFieldCount++;
 					continue;
 				}
 			}
-			missingFields.push(fieldName);
 		}
+
+		// Non-interactive runs (print/json/isolated subagents) fall back to the declared default.
+		if (fieldPrompt?.default) {
+			gatheredFields[fieldName] = fieldPrompt.default;
+			continue;
+		}
+		missingFields.push(fieldName);
 	}
 
 	if (missingFields.length > 0) {
@@ -596,7 +755,7 @@ export async function runThinOrchestratorProtocol(opts: {
 			content: [
 				{
 					type: "text",
-					text: `[Step 3 Gather Blocked] Missing required field(s): ${missingFields.join(", ")}. Provide them in \`fields\` before running.`,
+					text: `[Step 3 Gather Blocked] Missing required field(s): ${missingFields.join(", ")}. Provide them in \`fields\` before running.${renderAllowedFieldValues(missingFields, fieldPrompts)}`,
 				},
 			],
 			details: makeDetails(),
@@ -608,9 +767,23 @@ export async function runThinOrchestratorProtocol(opts: {
 	protocolSteps[2].durationMs = Date.now() - t3;
 	protocolSteps[2].summary =
 		requiredFieldNames.size > 0
-			? `Verified ${requiredFieldNames.size} required field(s): ${Array.from(requiredFieldNames).join(", ")}`
+			? `Verified ${requiredFieldNames.size} required field(s): ${Array.from(requiredFieldNames).join(", ")}${
+					promptedFieldCount > 0 ? ` (${promptedFieldCount} collected interactively)` : ""
+				}`
 			: "Core task input verified";
 	emitProgress("Step 3/7 (Gather) complete...");
+
+	// Secret fields (e.g. a plaintext API token) must never appear in the audit trail, the
+	// progress stream, downstream specialist prompts, or the aggregated tool result.
+	const secretValues = Array.from(
+		new Set(
+			Object.entries(fieldPrompts)
+				.filter(([, prompt]) => prompt.secret)
+				.map(([name]) => gatheredFields[name])
+				.filter((v): v is string => Boolean(v && v.length >= 4)),
+		),
+	);
+	const redact = (text: string) => redactSecrets(text, secretValues);
 
 	// =========================================================================
 	// STEP 4: AUTO-DISCOVER (Deterministic) — Zero-LLM environment discovery
@@ -661,6 +834,7 @@ export async function runThinOrchestratorProtocol(opts: {
 	protocolSteps[5].status = "running";
 	const stepOutputs = new Map<string, string>();
 	let previousOutput = "";
+	let totalLoopBacks = 0;
 
 	if (mode === "parallel") {
 		const placeholders: StageResult[] = resolvedSteps.map((step, i) => {
@@ -697,7 +871,7 @@ export async function runThinOrchestratorProtocol(opts: {
 					fields: gatheredFields,
 				});
 
-				const stageRes = await executeSpecialistStage({
+				const stageRes = await executeStage({
 					cwd: ctx.cwd,
 					projectConfigDir: catalog.projectConfigDir,
 					dispatchDefaults,
@@ -706,7 +880,9 @@ export async function runThinOrchestratorProtocol(opts: {
 					stepId: step.id,
 					taskPrompt: renderedTask,
 					gateCmd: step.gateCmd,
+					gateTimeoutMs: step.gateTimeoutMs,
 					attempt: 1,
+					secretValues,
 					signal,
 					onProgress: (current) => {
 						results[idx] = current;
@@ -721,12 +897,21 @@ export async function runThinOrchestratorProtocol(opts: {
 		await Promise.all(workers);
 	} else {
 		// Sequential workflow state machine or single specialist
-		for (let i = 0; i < resolvedSteps.length; i++) {
-			const step = resolvedSteps[i];
+		const stepIndexById = new Map(resolvedSteps.map((s, idx) => [s.id, idx]));
+		// Deterministic repair loops: failure text handed to the next run of a stage.
+		const pendingFeedback = new Map<string, string>();
+		const loopBacksUsed = new Map<string, number>();
+		let cursor = 0;
+
+		while (cursor < resolvedSteps.length) {
+			const step = resolvedSteps[cursor]!;
 			const spec = referencedSpecialists.get(step.agent)!;
+			const position = cursor;
 			const maxRetries = step.maxRetries ?? 1;
 			let attempt = 0;
-			let gateError: string | undefined;
+			let gateError = pendingFeedback.get(step.id);
+			pendingFeedback.delete(step.id);
+			const isRepairPass = gateError !== undefined;
 			let finalStageResult: StageResult | undefined;
 
 			while (attempt <= maxRetries) {
@@ -740,28 +925,30 @@ export async function runThinOrchestratorProtocol(opts: {
 					gateError,
 				});
 
-				const stageRes = await executeSpecialistStage({
+				const stageRes = await executeStage({
 					cwd: ctx.cwd,
 					projectConfigDir: catalog.projectConfigDir,
 					dispatchDefaults,
 					specialist: spec,
-					stepIndex: i + 1,
+					stepIndex: position + 1,
 					stepId: step.id,
 					taskPrompt: renderedTask,
 					gateCmd: step.gateCmd,
+					gateTimeoutMs: step.gateTimeoutMs,
 					attempt,
+					secretValues,
 					signal,
 					onProgress: (current) => {
-						results[i] = current;
+						results[position] = current;
 						emitProgress(
-							`Step 6/7 (Delegate [${i + 1}/${resolvedSteps.length}] ${spec.name}${attempt > 1 ? ` retry #${attempt - 1}` : ""}): ${
-								getFinalAssistantText(current.messages).slice(0, 80) || "running..."
+							`Step 6/7 (Delegate [${position + 1}/${resolvedSteps.length}] ${spec.name}${isRepairPass ? " repair" : ""}${attempt > 1 ? ` retry #${attempt - 1}` : ""}): ${
+								redact(getFinalAssistantText(current.messages)).slice(0, 80) || "running..."
 							}`,
 						);
 					},
 				});
 
-				results[i] = stageRes;
+				results[position] = stageRes;
 				finalStageResult = stageRes;
 
 				if (!isStageFailed(stageRes)) {
@@ -776,18 +963,55 @@ export async function runThinOrchestratorProtocol(opts: {
 			}
 
 			if (!finalStageResult || isStageFailed(finalStageResult)) {
+				const directive = step.onGateFail;
+				const targetIndex = directive ? (stepIndexById.get(directive.retryFrom) ?? -1) : -1;
+				const loopsUsed = loopBacksUsed.get(step.id) ?? 0;
+				const maxLoops = directive?.maxLoops ?? 0;
+				const canLoopBack =
+					directive !== undefined &&
+					targetIndex >= 0 &&
+					targetIndex < position &&
+					loopsUsed < maxLoops &&
+					finalStageResult?.stopReason !== "aborted";
+
+				if (canLoopBack && directive) {
+					const failureText = getStageOutput(finalStageResult!);
+					loopBacksUsed.set(step.id, loopsUsed + 1);
+					totalLoopBacks++;
+					// Invalidate stage outputs produced inside the re-run window so the retried chain
+					// never reads stale text from the attempt that just failed.
+					for (let k = targetIndex; k < position; k++) {
+						const windowStep = resolvedSteps[k]!;
+						stepOutputs.delete(windowStep.id);
+						pendingFeedback.delete(windowStep.id);
+					}
+					pendingFeedback.set(
+						directive.retryFrom,
+						`Stage "${step.id}" (${spec.name}) failed and requested a repair pass. Fix the root cause; the chain will then re-run starting at "${directive.retryFrom}".\n\n${failureText}`,
+					);
+					const previousStep = targetIndex > 0 ? resolvedSteps[targetIndex - 1] : undefined;
+					previousOutput = previousStep ? (stepOutputs.get(previousStep.id) ?? "") : "";
+					protocolSteps[5].summary = `Repair loop ${loopsUsed + 1}/${maxLoops}: stage "${step.id}" failed → re-running from "${directive.retryFrom}"`;
+					emitProgress(protocolSteps[5].summary);
+					cursor = targetIndex;
+					continue;
+				}
+
 				protocolSteps[5].status = "failed";
 				protocolSteps[5].durationMs = Date.now() - t6;
-				protocolSteps[5].summary = `Stage ${i + 1} (${spec.name}) failed after ${attempt} attempt(s)`;
+				protocolSteps[5].summary =
+					directive && loopsUsed >= maxLoops
+						? `Stage ${position + 1} (${spec.name}) failed after ${attempt} attempt(s) and ${loopsUsed}/${maxLoops} repair loop(s)`
+						: `Stage ${position + 1} (${spec.name}) failed after ${attempt} attempt(s)`;
 				protocolSteps[6].status = "failed";
 				protocolSteps[6].summary = `Contained failure at stage "${step.id}" (${spec.name})`;
 
-				const errText = finalStageResult ? getStageOutput(finalStageResult) : "Unknown error";
+				const errText = redact(finalStageResult ? getStageOutput(finalStageResult) : "Unknown error");
 				return {
 					content: [
 						{
 							type: "text",
-							text: `[Thin Orchestrator Contained Failure] Workflow stopped at stage ${i + 1}/${resolvedSteps.length} (\`${step.id}\` → specialist \`${spec.name}\`):\n\n${errText}`,
+							text: `[Thin Orchestrator Contained Failure] Workflow stopped at stage ${position + 1}/${resolvedSteps.length} (\`${step.id}\` → specialist \`${spec.name}\`):\n\n${errText}`,
 						},
 					],
 					details: makeDetails(),
@@ -795,15 +1019,18 @@ export async function runThinOrchestratorProtocol(opts: {
 				};
 			}
 
-			const stageText = getFinalAssistantText(finalStageResult.messages);
+			const stageText = redact(getFinalAssistantText(finalStageResult.messages));
 			stepOutputs.set(step.id, stageText);
 			previousOutput = stageText;
+			cursor++;
 		}
 	}
 
 	protocolSteps[5].status = "passed";
 	protocolSteps[5].durationMs = Date.now() - t6;
-	protocolSteps[5].summary = `Completed ${results.length} isolated specialist stage(s)`;
+	protocolSteps[5].summary = `Completed ${results.length} isolated specialist stage(s)${
+		totalLoopBacks > 0 ? `, ${totalLoopBacks} repair loop(s)` : ""
+	}`;
 
 	// =========================================================================
 	// STEP 7: HANDLE (Deterministic) — Aggregate results, verify gates, surface summary
@@ -824,7 +1051,8 @@ export async function runThinOrchestratorProtocol(opts: {
 	const summarySections = results.map((r) => {
 		const statusLabel = isStageFailed(r) ? "FAILED" : "COMPLETED";
 		const gateBadge = r.gateCmd ? (r.gatePassed ? " [GATE PASS]" : " [GATE FAIL]") : "";
-		return `### Stage ${r.stepIndex}: \`${r.stepId}\` → Specialist \`${r.agent}\` (${statusLabel}${gateBadge})\n\n${getStageOutput(r)}`;
+		const signalBadge = r.reportedGateStatus === "FAIL" ? " [SIGNAL FAIL]" : "";
+		return `### Stage ${r.stepIndex}: \`${r.stepId}\` → Specialist \`${r.agent}\` (${statusLabel}${gateBadge}${signalBadge})\n\n${redact(getStageOutput(r))}`;
 	});
 
 	const headerTitle =
