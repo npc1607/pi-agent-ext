@@ -20,14 +20,14 @@
 3. **Dual-Service Diffing & Dataset Matrix (双服务对比与数据矩阵)**：支持基线服务（`API_BASE_URL`）与候选服务（`API_CANDIDATE_URL`）并发/顺序双发，深层对象递归比对，支持字段黑名单遮罩（如 `created_at`, `updated_at`, `trace_id`）。
 4. **Deterministic Safe Teardown (确定性安全资源释放)**：基于语言级 `try ... finally`，测试过程中通过 `ctx.registerTeardown(fn)` 注册清理动作。无论中间哪一步断言失败，`finally` 保证逆序精准清理；对不可删除或处于非终态的实体执行安全软释放（`safeDelete`），记录为保留资源而不引发用例崩溃。
 5. **Gateway Auth Profile Switching (多维网关鉴权切换)**：原生支持多租户与微服务网关请求头组合（`tenant-id`, `x-xr-auth-uid`, `x-xr-auth-type`），支持在单测内部通过 `client.switchProfile('admin' | 'tenant_b' | 'unauth')` 动态切换身份。
-6. **Visual Reporter (可视化结构化报告)**：控制台输出 ANSI 高亮与上下结构 JSON 差异，自动生成 Markdown 汇总表格至 `tests/api/reports/latest-summary.md`。
+6. **Visual Reporter (可视化结构化报告)**：控制台输出 ANSI 高亮与上下结构 JSON 差异，自动生成 Markdown 汇总表格至 `.pi/api-tests/reports/latest-summary.md`。
 
 ---
 
 ## 1. 产物标准目录布局
 
 ```text
-tests/api/
+.pi/api-tests/
 ├── runner.ts               # 唯一测试入口，支持 bun run / npx tsx / node，退出码即结论
 ├── lib/
 │   ├── client.ts           # 核心强类型 HTTP Client（支持双服务、鉴权切换、超时控制）
@@ -44,19 +44,21 @@ tests/api/
 ├── scenarios/
 │   └── *.test.ts           # 业务场景链用例（DAG Scenario Chains & 状态机闭环）
 ├── baselines/
-│   └── *.json              # L3 黄金基线数据（归一化后提交 git 跟踪）
+│   └── *.json              # L3 黄金基线数据（归一化后）
 └── reports/
     └── latest-summary.md   # 运行报告输出（Markdown 格式，含通过率与全量结论表格）
-.pi/api-tests/env.local.json# 本地凭据与环境变量，chmod 600，必须在 .gitignore 中忽略
+.pi/secrets/
+├── api.env.local.json      # 凭据与环境变量，chmod 600（只在此处，绝不内联进套件源码）
+└── api.env.local.sh        # 同上（bash 侧）
 ```
 
 ---
 
 ## 2. 核心基础设施实现（零三方依赖，开箱即用）
 
-以下核心库位于 `tests/api/lib/`，纯原生 TypeScript 实现，不引入多余的 npm 依赖包。
+以下核心库位于 `.pi/api-tests/lib/`，纯原生 TypeScript 实现，不引入多余的 npm 依赖包。
 
-### 2.1 通用类型定义：`tests/api/types/common.ts`
+### 2.1 通用类型定义：`.pi/api-tests/types/common.ts`
 
 ```typescript
 export interface ApiResponse<T = any> {
@@ -99,7 +101,7 @@ export interface TestCaseResult {
 }
 ```
 
-### 2.2 核心客户端：`tests/api/lib/client.ts`
+### 2.2 核心客户端：`.pi/api-tests/lib/client.ts`
 
 ```typescript
 import { ApiResponse, HttpMethod, AuthProfile } from '../types/common';
@@ -198,7 +200,7 @@ export class ApiClient {
 }
 ```
 
-### 2.3 断言库与深层比较器：`tests/api/lib/assert.ts` & `tests/api/lib/diff.ts`
+### 2.3 断言库与深层比较器：`.pi/api-tests/lib/assert.ts` & `.pi/api-tests/lib/diff.ts`
 
 ```typescript
 import { ApiResponse, DiffOptions } from '../types/common';
@@ -285,7 +287,7 @@ export class Assertions {
 }
 ```
 
-### 2.4 上下文管理与确定性安全清理：`tests/api/lib/context.ts`
+### 2.4 上下文管理与确定性安全清理：`.pi/api-tests/lib/context.ts`
 
 ```typescript
 export class TestContext {
@@ -332,7 +334,7 @@ export class TestContext {
 }
 ```
 
-### 2.5 测试汇总与 Markdown 可视化报告器：`tests/api/lib/reporter.ts`
+### 2.5 测试汇总与 Markdown 可视化报告器：`.pi/api-tests/lib/reporter.ts`
 
 ```typescript
 import { TestCaseResult } from '../types/common';
@@ -398,7 +400,7 @@ export class Reporter {
 
 ## 3. 标准业务测试用例编写范式
 
-### 3.1 领域契约定义（`tests/api/types/job.ts`）
+### 3.1 领域契约定义（`.pi/api-tests/types/job.ts`）
 
 ```typescript
 export interface InferenceConfig {
@@ -427,7 +429,7 @@ export interface JobDetailResponse {
 }
 ```
 
-### 3.2 场景链与全生命周期防漂移测试（`tests/api/scenarios/job_pin.test.ts`）
+### 3.2 场景链与全生命周期防漂移测试（`.pi/api-tests/scenarios/job_pin.test.ts`）
 
 ```typescript
 import { ApiClient } from '../lib/client';
@@ -548,7 +550,7 @@ export async function runJobPinScenario(client: ApiClient, ctx: TestContext, rep
 
 ---
 
-## 4. 运行入口：`tests/api/runner.ts`
+## 4. 运行入口：`.pi/api-tests/runner.ts`
 
 ```typescript
 import { ApiClient } from './lib/client';
@@ -618,11 +620,11 @@ main().catch(err => {
 
 ```bash
 # 推荐 1：使用 Bun 运行（毫秒级原生支持 TS）
-bun run tests/api/runner.ts
+bun run .pi/api-tests/runner.ts
 
 # 推荐 2：使用 tsx / node 运行
-npx tsx tests/api/runner.ts
+npx tsx .pi/api-tests/runner.ts
 
 # 推荐 3：Node.js 22+ 原生类型剥离运行
-node --experimental-strip-types tests/api/runner.ts
+node --experimental-strip-types .pi/api-tests/runner.ts
 ```

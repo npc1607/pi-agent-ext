@@ -20,7 +20,7 @@ Loaded at runtime from `knowledge/api-test-strategy.md`: mandatory artifact layo
 - Whether this is a repair pass (a previous suite failure is attached below, if any).
 
 ## 3. Step-by-Step Workflow
-1. Create the mandatory layout under `tests/api/`:
+1. Create the mandatory layout under `.pi/api-tests/`:
    - `runner.ts` (single entry point, exits with 0 on pass or 1 on fail)
    - `lib/client.ts`, `lib/assert.ts`, `lib/diff.ts`, `lib/context.ts`, `lib/reporter.ts` (pure TypeScript implementations from `knowledge/api-test-strategy.md`)
    - `types/*.ts` (strong types for request DTOs and response contracts)
@@ -36,8 +36,8 @@ Loaded at runtime from `knowledge/api-test-strategy.md`: mandatory artifact layo
    - Resolve pre-existing entities, tenant/user references, and active versions via read-only calls.
    - Store resolved values into `ctx.set(key, val)`.
    - Never hardcode environment-specific IDs in `cases/` or `scenarios/`.
-4. Write `.pi/api-tests/env.local.json` with gathered URLs and auth headers, `chmod 600`, and ensure `.gitignore` contains `.pi/api-tests/` (while `tests/api/baselines/` IS tracked in git).
-5. **Implement DAG Scenario Chains** under `tests/api/scenarios/*.test.ts`:
+4. Write `.pi/secrets/api.env.local.json` with gathered URLs and auth headers, `chmod 600`. Credentials live only there (or in environment variables) - never inline a token into suite sources.
+5. **Implement DAG Scenario Chains** under `.pi/api-tests/scenarios/*.test.ts`:
    - Follow standard state machine lifecycle: Create -> Read -> Optimistic Lock 409 -> Version Increment -> Downstream Pin Binding -> Anti-Drift Verification -> Safe Teardown.
    - Pass variables cleanly across steps using `ctx.set(key, val)` and `ctx.get(key)` / `ctx.require(key)`.
    - For optimistic locking, assert HTTP 409 as expected pass status (`Assertions.assertStatus(res, 409)`).
@@ -46,9 +46,9 @@ Loaded at runtime from `knowledge/api-test-strategy.md`: mandatory artifact layo
 6. **Implement Dual-Service Diffing** via `Assertions.assertDiff(resBase, resCand, { ignoreKeys })` when `API_CANDIDATE_URL` is active.
 7. **Implement Dataset Matrix** loops (`for (const dataset of ['legacy', 'new_feature']) { ... }`) where requested by the test plan.
 8. **Implement Auth Profile transitions** using `client.switchProfile('admin' | 'tenant_b' | 'unauth')`.
-9. Ensure `runner.ts` triggers `reporter.generateSummary()`, generating `tests/api/reports/latest-summary.md` and returning non-zero if any test failed.
+9. Ensure `runner.ts` triggers `reporter.generateSummary()`, generating `.pi/api-tests/reports/latest-summary.md` and returning non-zero if any test failed.
 10. On a repair pass, reproduce the failing test point first, then fix the resolver/contract/assertion/request — never delete a case, loosen a type check, or hardcode a value to reach green.
-11. Report: files touched, scenario chain sequence, dual-service diff status, and the exact command to run the suite (`bun run tests/api/runner.ts` or `npx tsx tests/api/runner.ts`).
+11. Report: files touched, scenario chain sequence, dual-service diff status, and the exact command to run the suite (`bun run .pi/api-tests/runner.ts` or `npx tsx .pi/api-tests/runner.ts`).
 
 ## 4. Discovery Patterns
 - Never hardcode credentials, tokens, hostnames with secrets, or passwords in any test file.

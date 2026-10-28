@@ -103,18 +103,20 @@ recon(scout) -> inputs(api-fixture-scout) -> plan(planner) -> author(api-test-au
 
 | 产物 | 作用 |
 | :--- | :--- |
-| `tests/api/runner.ts` | 唯一入口，执行套件并统计退出码（`bun run tests/api/runner.ts` 或 `npx tsx tests/api/runner.ts`） |
-| `tests/api/lib/client.ts` | 强类型 HTTP Client（支持双服务并发、Profile 鉴权切换） |
-| `tests/api/lib/assert.ts` | 四层断言（L1 Status, L2 Type Contract, L3 Deep Diff, L4 Semantic） |
-| `tests/api/lib/diff.ts` | 对象深层结构比较器（支持 Key 过滤与路径屏蔽） |
-| `tests/api/lib/context.ts` | Typed DAG Context 状态机变量传递与 Safe Teardown 逆序清理 |
-| `tests/api/lib/reporter.ts` | 收集结果，控制台输出 ANSI 高亮，自动生成 Markdown 汇总报表 |
-| `tests/api/types/*.ts` | 领域强类型定义（Request DTO & Response 契约） |
-| `tests/api/prep.ts` | **运行时**依赖探活收集（只读请求），在用例前就绪 |
-| `tests/api/cases/*.test.ts` | 独立接口与多状态矩阵用例 |
-| `tests/api/scenarios/*.test.ts` | 完整业务生命周期 DAG 场景链（状态机流转与防漂移闭环） |
-| `tests/api/baselines/*.json` | L3 数据基线（归一化后，**必须提交仓库**） |
-| `.pi/api-tests/env.local.json` | 本地凭据与环境变量，`chmod 600`，必须 gitignore |
+| `.pi/api-tests/runner.ts` | 唯一入口，执行套件并统计退出码（`bun run .pi/api-tests/runner.ts` 或 `npx tsx .pi/api-tests/runner.ts`） |
+| `.pi/api-tests/lib/client.ts` | 强类型 HTTP Client（支持双服务并发、Profile 鉴权切换） |
+| `.pi/api-tests/lib/assert.ts` | 四层断言（L1 Status, L2 Type Contract, L3 Deep Diff, L4 Semantic） |
+| `.pi/api-tests/lib/diff.ts` | 对象深层结构比较器（支持 Key 过滤与路径屏蔽） |
+| `.pi/api-tests/lib/context.ts` | Typed DAG Context 状态机变量传递与 Safe Teardown 逆序清理 |
+| `.pi/api-tests/lib/reporter.ts` | 收集结果，控制台输出 ANSI 高亮，自动生成 Markdown 汇总报表 |
+| `.pi/api-tests/types/*.ts` | 领域强类型定义（Request DTO & Response 契约） |
+| `.pi/api-tests/prep.ts` | **运行时**依赖探活收集（只读请求），在用例前就绪 |
+| `.pi/api-tests/cases/*.test.ts` | 独立接口与多状态矩阵用例 |
+| `.pi/api-tests/scenarios/*.test.ts` | 完整业务生命周期 DAG 场景链（状态机流转与防漂移闭环） |
+| `.pi/api-tests/baselines/*.json` | L3 数据基线（归一化后的黄金数据） |
+| `.pi/secrets/api.env.local.json` | 凭据与环境变量，`chmod 600` |
+
+> 名称分层：`.pi/api-tests/` 是**测试套件**（代码产物），`.pi/secrets/` 是**凭据与环境变量**（运行时输入）。唯一硬约束：凭据只能落在 `.pi/secrets/`，绝不能内联进套件源码。
 
 ### 前置依赖解析（参数 / 前置调用）
 
@@ -134,12 +136,12 @@ POST /v1/orders | account    | 人工提供 | —                           | �
 
 来源优先级：**代码**（DTO/validator/枚举/seed）→ **只读接口** → **同套件前序用例** → **人工**。写入类请求在侦察阶段一律禁止。
 
-**2. `tests/api/prep.ts`（运行时收集）**
+**2. `.pi/api-tests/prep.ts`（运行时收集）**
 
 环境相关的 id 绝不写进用例，统一在 `prep.ts` 里运行时解析后写入 typed context：
 
 ```typescript
-// tests/api/prep.ts — Level 1 只读查询 -> Level 2 即时创建 -> Level 3 降级历史种子
+// .pi/api-tests/prep.ts — Level 1 只读查询 -> Level 2 即时创建 -> Level 3 降级历史种子
 await resolvePrerequisites(client, ctx);
 
 const products = await client.callBase<ApiResponse<Product[]>>('GET', '/v1/products?limit=1');
@@ -179,7 +181,7 @@ ctx.set('productId', productId);
    - Author stage 提示词与 Recon raw dump 解耦，仅接收结构化 Plan 与 Inputs，防止大接口用例生成超时。
 5. **规范化可视化报告（Visual Reporter）**：
    - 控制台输出上下结构 JSON 对比（Top: Baseline, Bottom: Candidate）并带 ANSI 语法着色（绿通过、红拦截/差异、青变量提取）。
-   - 自动在 `tests/api/reports/latest-summary.md` 生成规范的 Markdown 汇总表格。
+   - 自动在 `.pi/api-tests/reports/latest-summary.md` 生成规范的 Markdown 汇总表格。
 
 ### 数据基线对比（L3）
 
@@ -194,9 +196,7 @@ Gather 阶段收集的 `baseline_mode` 决定行为，`normalizeObject()` 先递
 
 实现上对应 `Assertions.assertBaseline(res, name, baselineDir, { ignoreKeys }, mode)`；默认忽略列表只覆盖**已知易变键名**，嵌套或领域特有的易变字段通过 `ignoreKeys` 显式追加（如 `['id', 'createdAt', 'pagination.total']`）。
 
-### CI 集成（零 Pi 依赖、零 token）
-
-Pi 只在开发阶段生成/修复套件；CI 只跑 `runner.ts`：
+### 执行（本机 / CI 同一条命令）
 
 ```bash
 cd <repo>
@@ -204,25 +204,13 @@ API_BASE_URL=https://api-baseline.internal \
 API_CANDIDATE_URL=https://api-candidate.internal \
 API_TOKEN="$API_TOKEN" \
 API_NO_PROXY='*' \
-bun run tests/api/runner.ts   # 或 npx tsx tests/api/runner.ts
+bun run .pi/api-tests/runner.ts   # 或 npx tsx .pi/api-tests/runner.ts
 ```
 
-- 退出码 `0` 全绿 / `1` 有回归（契约违约、基线漂移、状态码不符、双服务 payload 差异），可直接作为门禁。
+- 退出码 `0` 全绿 / `1` 有回归（契约违约、基线漂移、状态码不符、双服务 payload 差异）。
 - 依赖只有 `bun`（或 `node` 20+ / `tsx`）；纯 TypeScript，无构建步骤、无 TTY、无交互、无 LLM、无第三方 npm 包。
-- 测试产物在 `tests/api/reports/latest-summary.md` 自动生成 Markdown 报告，供 CI Job Summary 直接渲染。
-
-GitHub Actions 片段：
-
-```yaml
-- name: API regression
-  env:
-    API_BASE_URL: ${{ secrets.API_BASE_URL }}
-    API_CANDIDATE_URL: ${{ secrets.API_CANDIDATE_URL }}
-    API_TOKEN: ${{ secrets.API_TOKEN }}
-    API_BASELINE_MODE: verify
-    API_NO_PROXY: "*"
-  run: bun run tests/api/runner.ts
-```
+- 报告落在 `.pi/api-tests/reports/latest-summary.md`。
+- `runner.ts` 无 TTY、无交互、零 token 依赖，退出码即结论：只要 CI 里能拿到套件文件（怎么拿到由仓库自行决定），就能直接当门禁跑。
 
 ### Gather 弹窗
 
@@ -275,8 +263,8 @@ GitHub Actions 片段：
 
 ### 凭据与安全
 
-- 凭据只落在 `.pi/api-tests/env.local.json`（`chmod 600`，必须被 `.gitignore` 命中），`runner.ts` 启动时读取它；CI 直接用环境变量。
-- `author` 步的确定性 gate 会拦截：`Bearer <长串>` / `API_TOKEN=<值>` 出现在 `git diff`、暂存区或**未跟踪文件**中；`.pi/api-tests/env.local.json` / `env.local.sh` 未被 gitignore；`tests/api/baselines/` 被 gitignore（基线必须入库）；`git diff --check` 报告空白错误。
+- 凭据只落在 `.pi/secrets/api.env.local.json`（`chmod 600`），`runner.ts` 启动时读取它，或直接用环境变量；凭据绝不内联进套件源码。
+- `author` 步的确定性 gate 会拦截：`.pi/api-tests/runner.ts` 未生成；`Bearer <长串>` / `API_TOKEN=<值>` 之类的凭据字面量被写进 `.pi/api-tests/` 下的套件源码或仓库的 git diff 中。
 - 注意：允许明文输入意味着 token 会进入 `author` 子进程上下文（审计副本已打码），落地文件在仓库工作区内。
 
 ### Behaviour change for existing workflows

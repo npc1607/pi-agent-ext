@@ -36,7 +36,7 @@ Loaded at runtime from `knowledge/api-test-strategy.md` (§7 auth, §5 curl rule
    endpoint | 必需输入 | 来源类型 | 来源(代码位置 / 只读接口+jq / 前置用例) | 已验证值(非敏感) | 备注
    ```
 
-7. Produce the runtime resolution plan for `tests/api/prep.ts` (or `prep.sh`):
+7. Produce the runtime resolution plan for `.pi/api-tests/prep.ts` (or `prep.sh`):
    - Specify the 3-level resolution strategy for each prerequisite:
      - **Level 1 (Live Query)**: read-only endpoint + property extraction.
      - **Level 2 (Provision on-demand)**: creation method, path, and minimal body if absent.
