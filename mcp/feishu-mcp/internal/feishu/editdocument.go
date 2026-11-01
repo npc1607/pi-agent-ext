@@ -139,6 +139,10 @@ func (c *Client) EditDocument(ctx context.Context, ref string, ops []Operation, 
 
 		case "append":
 			if dryRun {
+				if err := validateSpecs(op.Blocks); err != nil {
+					stepErr = err
+					break
+				}
 				results = append(results, map[string]any{"op": "append", "dry_run": true})
 				break
 			}
