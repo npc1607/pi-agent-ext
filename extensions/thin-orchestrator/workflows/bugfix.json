@@ -22,14 +22,26 @@
       "maxRetries": 1
     },
     {
+      "id": "design-tests",
+      "agent": "test-case-designer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Scout Reconnaissance Report\n{step:recon}\n\n## Approved Fix Plan\n{step:plan}\n\n## Implementation Summary\n{step:implement}\n\nDesign regression test cases for this bugfix. Extract test points from the root cause, the fix, and adjacent risk areas. At minimum include a case that reproduces the original bug (red before fix, green after) and cases for boundary/exception paths touched by the fix. Output the Universal Case Matrix (knowledge §3) and Table-Driven Case Spec (knowledge §5.1) where applicable. Prioritize P0/P1 cases and keep output under 80 lines."
+    },
+    {
+      "id": "implement-tests",
+      "agent": "implementer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Case Specification\n{step:design-tests}\n\nImplement the designed regression tests. Use the repository's existing test conventions and reusable fixtures. Write table-driven tests where cases share logic, use t.Helper() for helpers, and t.Cleanup() for teardown. Ensure every failure message includes function name, inputs, got, and want. Run the new tests to confirm they compile and pass. Do not modify production code unless a test exposes a real defect; if so, report it explicitly.",
+      "gateCmd": "git diff --check",
+      "maxRetries": 1
+    },
+    {
       "id": "verify",
       "agent": "verifier",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\nVerify compilation and run relevant unit tests."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nVerify compilation and run relevant unit tests, including the newly added regression tests."
     },
     {
       "id": "review",
       "agent": "reviewer",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:verify}\n\nReview the diff for regressions and edge cases."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:implement-tests}\n\n---\n{step:verify}\n\nReview the diff for regressions and edge cases, covering both the fix and the new tests."
     }
   ]
 }

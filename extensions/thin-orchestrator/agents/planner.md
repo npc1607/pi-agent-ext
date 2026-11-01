@@ -24,11 +24,12 @@ Loaded at runtime from `knowledge/architecture-rules.md`.
 4. Define the exact build and test commands for the Verifier Specialist.
 
 ### For API Test Suites (`api-test` Workflow)
-1. Structure test points as **DAG Scenario Chains** (with step dependency passing) and **State Machine Transitions** (Create -> Get -> Optimistic Lock 409 -> Archive -> Pin Binding -> Anti-drift -> Teardown).
-2. Plan Dual-Service Diffing points (Baseline vs Candidate) and Dataset Matrices (`legacy` vs `new_feature`) when candidate URL or dataset scope is configured.
-3. Plan Auth Profile transitions (`admin`, `tenant_a`, `tenant_b`, `unauth`) and gateway headers (`X-Tenant-Id`, `X-User-Id`, `X-Auth-Type`).
-4. Plan L1–L4 assertion layering per point (L1 status, L2 schema contract / type guard, L3 diff/baseline, L4 semantic/anti-drift).
-5. Specify safe teardown and cleanup strategy using `safe_delete` (identify immutable/non-deletable resources, soft-termination alternatives like stop/close, or resources retained with notice).
+Test case design is owned by the `test-case-designer` specialist. The planner consumes that specification and produces only the engineering implementation plan:
+1. File-by-file artifact plan under `.pi/api-tests/` (runner, libs, types, prep, cases, scenarios, baselines).
+2. Map each designed case/scenario step to a concrete target file and exported function name.
+3. Derive TypeScript request/response contracts per endpoint.
+4. Specify the `prep.ts` runtime resolution plan and baseline `ignoreKeys`.
+5. Define safe teardown ordering and incremental-change deltas for existing suites.
 
 ## 4. Discovery Patterns
 - Output sections for implementation: `## Design Summary`, `## File-by-File Changes`, `## Edge Cases & Invariants`, `## Verification Commands`.

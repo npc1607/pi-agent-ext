@@ -438,6 +438,96 @@ export async function executeSpecialistStage(opts: {
 }
 
 /**
+ * Parse repo-relative env files for `KEY=value` / `export KEY=value` pairs.
+ * Files are read as text and never executed: a workflow may pick up configuration it generated
+ * on a previous run (e.g. `.pi/api-tests/env.local.sh`) without the engine trusting shell content.
+ */
+export function loadEnvFiles(cwd: string, files: string[]): Record<string, string> {
+	const values: Record<string, string> = {};
+	for (const rel of files) {
+		const filePath = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
+		let text: string;
+		try {
+			text = fs.readFileSync(filePath, "utf-8");
+		} catch {
+			continue;
+		}
+		// JSON config (e.g. `.pi/secrets/api.env.local.json`) wins over shell-style parsing.
+		if (filePath.endsWith(".json")) {
+			try {
+				const parsed = JSON.parse(text) as Record<string, unknown>;
+				for (const [k, v] of Object.entries(parsed ?? {})) {
+					if (typeof v === "string" && v.trim()) values[k] = v.trim();
+					else if (typeof v === "number") values[k] = String(v);
+				}
+				continue;
+			} catch {
+				// fall through to shell-style parsing
+			}
+		}
+		for (const line of text.split(/\r?\n/)) {
+			const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+			if (!match) continue;
+			let value = match[2]!.trim();
+			value = value.replace(/\s+#.*$/, "").trim();
+			if (
+				(value.startsWith('"') && value.endsWith('"')) ||
+				(value.startsWith("'") && value.endsWith("'"))
+			) {
+				value = value.slice(1, -1);
+			}
+			if (value) values[match[1]!] = value;
+		}
+	}
+	return values;
+}
+
+/**
+ * Read the persisted field store: `{ version, "<workflow-or-agent>": { field: value } }`.
+ * Secrets are never written here, so the file stays safe to keep on disk.
+ */
+export function loadFieldStore(storePath: string, storeKey: string): Record<string, string> {
+	try {
+		const parsed = JSON.parse(fs.readFileSync(storePath, "utf-8")) as Record<string, unknown>;
+		const section = parsed[storeKey];
+		if (!section || typeof section !== "object" || Array.isArray(section)) return {};
+		const out: Record<string, string> = {};
+		for (const [k, v] of Object.entries(section as Record<string, unknown>)) {
+			if (typeof v === "string" && v.trim()) out[k] = v;
+		}
+		return out;
+	} catch {
+		return {};
+	}
+}
+
+/** Merge values into the persisted field store, preserving other workflows' sections. */
+export function saveFieldStore(storePath: string, storeKey: string, values: Record<string, string>): void {
+	const entries = Object.entries(values).filter(([, v]) => v && v.trim());
+	if (entries.length === 0) return;
+	let parsed: Record<string, unknown> = {};
+	try {
+		const raw = JSON.parse(fs.readFileSync(storePath, "utf-8")) as Record<string, unknown>;
+		if (raw && typeof raw === "object" && !Array.isArray(raw)) parsed = raw;
+	} catch {
+		parsed = {};
+	}
+	const section =
+		parsed[storeKey] && typeof parsed[storeKey] === "object" && !Array.isArray(parsed[storeKey])
+			? ({ ...(parsed[storeKey] as Record<string, unknown>) } as Record<string, unknown>)
+			: {};
+	for (const [k, v] of entries) section[k] = v;
+	parsed.version = 1;
+	parsed[storeKey] = section;
+	try {
+		fs.mkdirSync(path.dirname(storePath), { recursive: true });
+		fs.writeFileSync(storePath, `${JSON.stringify(parsed, null, 2)}\n`, { encoding: "utf-8", mode: 0o600 });
+	} catch {
+		// Persisting is best-effort: a read-only workspace must not fail the run.
+	}
+}
+
+/**
  * Render the allowed values for enumerated (selector-backed) gather fields, so a headless caller
  * knows exactly which strings are accepted instead of guessing.
  */
@@ -485,6 +575,8 @@ export async function runThinOrchestratorProtocol(opts: {
 	const protocolSteps = createInitialProtocolSteps();
 	const results: StageResult[] = [];
 	let workspace: WorkspaceDiscovery | undefined;
+	/** How each required field was resolved in Step 3 (explicit / env:* / remembered / discovered / prompted / default). */
+	let fieldSourcesResolved: Record<string, string> | undefined;
 
 	const makeDetails = (): OrchestratorDetails => ({
 		mode,
@@ -493,6 +585,7 @@ export async function runThinOrchestratorProtocol(opts: {
 		agentScope,
 		workspace,
 		protocolSteps: protocolSteps.map((s) => ({ ...s })),
+		fieldSources: fieldSourcesResolved ? { ...fieldSourcesResolved } : undefined,
 		results: [...results],
 	});
 
@@ -708,14 +801,96 @@ export async function runThinOrchestratorProtocol(opts: {
 
 	const missingFields: string[] = [];
 	const fieldPrompts = resolvedWorkflow?.fieldPrompts ?? {};
+	const fieldSources: Record<string, string> = {};
 	let promptedFieldCount = 0;
 
+	// Gather never starts from zero: a value is reused from the environment, from the previous
+	// run's answers, or from deterministic repo discovery before the user is ever asked.
+	const storeKey = mode === "workflow" ? (workflowName ?? "workflow") : mode === "single" ? (singleAgentName ?? "single") : "parallel";
+	const storePath = path.join(ctx.cwd, resolvedWorkflow?.fieldStore ?? ".pi/orchestrator/fields.json");
+	const envValues = loadEnvFiles(ctx.cwd, resolvedWorkflow?.envFiles ?? []);
+
+	// Pre-Gather probe (Step 3.0): one deterministic command may resolve most fields by
+	// inspecting the existing suite, repo config, and live services. This is what makes a
+	// repeat run (or a different model) silent instead of re-interviewing the user.
+	const preDiscovered: Record<string, string> = {};
+	if (resolvedWorkflow?.preDiscoverCmd) {
+		const probe = runDeterministicShellCheck(resolvedWorkflow.preDiscoverCmd, ctx.cwd, 20_000);
+		if (probe.passed && probe.output.trim()) {
+			try {
+				const parsed = JSON.parse(probe.output.trim().split("\n").pop() ?? "{}") as Record<string, unknown>;
+				for (const [k, v] of Object.entries(parsed ?? {})) {
+					if (typeof v === "string" && v.trim()) preDiscovered[k] = v.trim();
+					else if (typeof v === "number") preDiscovered[k] = String(v);
+				}
+			} catch {
+				// A malformed probe output is ignored: discovery is best-effort, never fatal.
+			}
+		}
+	}
+	const storedValues = loadFieldStore(storePath, storeKey);
+	const learned: Record<string, string> = {};
+
 	for (const fieldName of requiredFieldNames) {
-		if (gatheredFields[fieldName] && gatheredFields[fieldName].trim()) continue;
+		if (gatheredFields[fieldName] && gatheredFields[fieldName].trim()) {
+			fieldSources[fieldName] = "explicit";
+			if (fieldName !== "task") learned[fieldName] = gatheredFields[fieldName]!.trim();
+			continue;
+		}
 
 		const fieldPrompt = fieldPrompts[fieldName];
 		const dialogTitle = fieldPrompt?.title ?? `[Thin Orchestrator] Required field "${fieldName}"`;
 
+		// 1) Pre-Gather probe: the repo already knows (existing suite / config / live service).
+		const probed = preDiscovered[fieldName]?.trim();
+		if (probed && (!fieldPrompt?.options?.length || fieldPrompt.options.includes(probed))) {
+			gatheredFields[fieldName] = probed;
+			fieldSources[fieldName] = "probed";
+			learned[fieldName] = probed;
+			continue;
+		}
+
+		// 2) Environment: the workflow's own env files, then the live process environment.
+		//    Credentials live here and are never persisted.
+		if (fieldPrompt?.envVar) {
+			const fromEnv = (envValues[fieldPrompt.envVar] ?? process.env[fieldPrompt.envVar] ?? "").trim();
+			if (fromEnv) {
+				gatheredFields[fieldName] = fromEnv;
+				fieldSources[fieldName] = `env:${fieldPrompt.envVar}`;
+				continue;
+			}
+		}
+
+		// 3) Answers from a previous run (skipped for secrets, which are never stored).
+		const stored = storedValues[fieldName]?.trim();
+		if (stored && (!fieldPrompt?.options?.length || fieldPrompt.options.includes(stored))) {
+			gatheredFields[fieldName] = stored;
+			fieldSources[fieldName] = "remembered";
+			continue;
+		}
+
+		// 4) Deterministic per-field discovery from the repository.
+		if (fieldPrompt?.discoverCmd) {
+			const discovered = runDeterministicShellCheck(fieldPrompt.discoverCmd, ctx.cwd, 15_000);
+			const value = discovered.output.trim();
+			const acceptable = value && (!fieldPrompt.options?.length || fieldPrompt.options.includes(value));
+			if (discovered.passed && acceptable) {
+				gatheredFields[fieldName] = value;
+				fieldSources[fieldName] = "discovered";
+				learned[fieldName] = value;
+				continue;
+			}
+		}
+
+		// 5) A declared default is an answer, not a question: resolving it silently is what
+		//    makes repeat runs stop asking. `ask: true` opts back into prompting.
+		if (fieldPrompt?.default && fieldPrompt.ask !== true) {
+			gatheredFields[fieldName] = fieldPrompt.default;
+			fieldSources[fieldName] = "default";
+			continue;
+		}
+
+		// 6) Ask the user — only when nothing above resolved it.
 		if (ctx.hasUI) {
 			if (fieldPrompt?.options?.length) {
 				// Deterministic choice list: no free-text ambiguity for enumerated decisions
@@ -723,7 +898,9 @@ export async function runThinOrchestratorProtocol(opts: {
 				const picked = await ctx.ui.select(dialogTitle, fieldPrompt.options);
 				if (picked && picked.trim()) {
 					gatheredFields[fieldName] = picked.trim();
+					fieldSources[fieldName] = "prompted";
 					promptedFieldCount++;
+					learned[fieldName] = picked.trim();
 					continue;
 				}
 			} else {
@@ -733,15 +910,18 @@ export async function runThinOrchestratorProtocol(opts: {
 				);
 				if (userVal && userVal.trim()) {
 					gatheredFields[fieldName] = userVal.trim();
+					fieldSources[fieldName] = "prompted";
 					promptedFieldCount++;
+					learned[fieldName] = userVal.trim();
 					continue;
 				}
 			}
 		}
 
-		// Non-interactive runs (print/json/isolated subagents) fall back to the declared default.
+		// 7) Declared default (explicitly askable, or non-interactive fallback).
 		if (fieldPrompt?.default) {
 			gatheredFields[fieldName] = fieldPrompt.default;
+			fieldSources[fieldName] = "default";
 			continue;
 		}
 		missingFields.push(fieldName);
@@ -763,13 +943,22 @@ export async function runThinOrchestratorProtocol(opts: {
 		};
 	}
 
+	// Remember non-secret answers so the next run (or another model) does not ask again.
+	const persistable: Record<string, string> = {};
+	for (const [name, value] of Object.entries(learned)) {
+		if (fieldPrompts[name]?.secret || fieldPrompts[name]?.persist === false) continue;
+		persistable[name] = value;
+	}
+	saveFieldStore(storePath, storeKey, persistable);
+	fieldSourcesResolved = fieldSources;
+
 	protocolSteps[2].status = "passed";
 	protocolSteps[2].durationMs = Date.now() - t3;
 	protocolSteps[2].summary =
 		requiredFieldNames.size > 0
-			? `Verified ${requiredFieldNames.size} required field(s): ${Array.from(requiredFieldNames).join(", ")}${
-					promptedFieldCount > 0 ? ` (${promptedFieldCount} collected interactively)` : ""
-				}`
+			? `Verified ${requiredFieldNames.size} required field(s): ${Array.from(requiredFieldNames)
+					.map((n) => (fieldSources[n] === "prompted" ? `${n}=asked` : `${n}=${fieldSources[n] ?? "unset"}`))
+					.join(", ")}${promptedFieldCount > 0 ? ` (${promptedFieldCount} asked)` : " (nothing asked)"}`
 			: "Core task input verified";
 	emitProgress("Step 3/7 (Gather) complete...");
 

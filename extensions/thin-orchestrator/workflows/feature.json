@@ -22,14 +22,26 @@
       "maxRetries": 1
     },
     {
+      "id": "design-tests",
+      "agent": "test-case-designer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Scout Reconnaissance Report\n{step:recon}\n\n## Implementation Blueprint\n{step:plan}\n\n## Implementation Summary\n{step:implement}\n\nDesign unit and integration test cases for the implemented feature. Extract test points from the feature requirements, implementation changes, and risk areas. Output the Universal Case Matrix (knowledge §3) and Table-Driven Case Spec (knowledge §5.1) where applicable. Cover happy paths, boundary values, error branches, and state transitions introduced or modified by this feature. Prioritize P0/P1 cases and keep output under 80 lines."
+    },
+    {
+      "id": "implement-tests",
+      "agent": "implementer",
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Case Specification\n{step:design-tests}\n\nImplement the designed unit and integration tests. Use the repository's existing test conventions and reusable fixtures. Write table-driven tests where cases share logic, use t.Helper() for helpers, and t.Cleanup() for teardown. Ensure every failure message includes function name, inputs, got, and want. Run the new tests to confirm they compile and pass. Do not modify production code unless a test exposes a real defect; if so, report it explicitly.",
+      "gateCmd": "git diff --check",
+      "maxRetries": 1
+    },
+    {
       "id": "verify",
       "agent": "verifier",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\nRun build and test verification."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nRun build and test verification, including the newly added tests."
     },
     {
       "id": "review",
       "agent": "reviewer",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:verify}\n\nPerform final code review."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation & Verification\n{step:implement}\n\n---\n{step:implement-tests}\n\n---\n{step:verify}\n\nPerform final code review of both production and test changes."
     }
   ]
 }

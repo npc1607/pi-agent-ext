@@ -36,6 +36,7 @@ thin-orchestrator/
 │   ├── scout.md             # Read-only codebase recon & dependency boundary discovery
 │   ├── api-fixture-scout.md # Resolves every endpoint input from code / read-only APIs (dependency table + runtime resolution plan)
 │   ├── planner.md           # Technical blueprint & step-by-step execution planning
+│   ├── test-case-designer.md # Universal test point extraction & test case specification (API / unit / integration)
 │   ├── implementer.md       # Scoped code implementation with `git diff --check` post-gate
 │   ├── api-test-author.md   # Strongly-typed TypeScript HTTP API test authoring & in-loop repair specialist
 │   ├── verifier.md          # Deterministic build, test, and static analysis verification
@@ -45,12 +46,13 @@ thin-orchestrator/
 │   ├── architecture-rules.md
 │   ├── implementation-conventions.md
 │   ├── api-test-strategy.md # Four-layer assertions, DAG scenarios, dual-service diffing, safe teardown, secret hygiene
+│   ├── test-case-design.md  # Equivalence/boundary/state-machine/DAG design methods & output contract
 │   ├── verification-checklist.md
 │   └── review-checklist.md
 └── workflows/               # Deterministic Workflow Templates (reuse specialists without new agent code)
-    ├── bugfix.json          # scout -> planner -> implementer -> verifier -> reviewer
-    ├── feature.json         # scout -> planner -> implementer -> verifier -> reviewer
-    ├── api-test.json        # scout -> inputs -> planner -> api-test-author -> verifier (repair loop) -> reviewer
+    ├── bugfix.json          # scout -> planner -> implementer -> test-case-designer -> implementer(tests) -> verifier -> reviewer
+    ├── feature.json         # scout -> planner -> implementer -> test-case-designer -> implementer(tests) -> verifier -> reviewer
+    ├── api-test.json        # scout -> inputs -> test-case-designer -> planner -> api-test-author -> verifier (repair loop) -> reviewer
     ├── scout-and-plan.json  # scout -> planner
     └── review-and-fix.json  # reviewer -> implementer -> verifier
 ```
@@ -96,16 +98,18 @@ Press `Ctrl+O` on any `thin_orchestrator` result block in Pi's TUI to expand the
 `api-test` 在 Step 3（Gather）**用选择器向用户提问**，把「鉴权方式」「回归范围」「基线对比模式」变成显式输入，而不是让 LLM 猜。生成纯 TypeScript（强类型）测试工程，原生兼容 Node 20+、Bun、tsx，零繁琐构建配置。
 
 ```text
-recon(scout) -> inputs(api-fixture-scout) -> plan(planner) -> author(api-test-author) -> verify(verifier) -> review(reviewer)
-                                                                  ^                          |
-                                                                  +------ onGateFail --------+
+recon(scout) -> inputs(api-fixture-scout) -> design(test-case-designer) -> plan(planner) -> author(api-test-author) -> verify(verifier) -> review(reviewer)
+                                                                                                      ^                          |
+                                                                                                      +------ onGateFail --------+
 ```
 
 | 产物 | 作用 |
 | :--- | :--- |
-| `.pi/api-tests/runner.ts` | 唯一入口，执行套件并统计退出码（`bun run .pi/api-tests/runner.ts` 或 `npx tsx .pi/api-tests/runner.ts`） |
-| `.pi/api-tests/lib/client.ts` | 强类型 HTTP Client（支持双服务并发、Profile 鉴权切换） |
-| `.pi/api-tests/lib/assert.ts` | 四层断言（L1 Status, L2 Type Contract, L3 Deep Diff, L4 Semantic） |
+| `.pi/api-tests/runner.ts` | 唯一入口：**自动发现** `cases/` + `scenarios/`（不维护套件清单），落盘实测路由快照并统计退出码（`bun run .pi/api-tests/runner.ts` 或 `npx tsx .pi/api-tests/runner.ts`） |
+| `.pi/api-tests/lib/client.ts` | 强类型 HTTP Client（支持双服务并发、Profile 鉴权切换），每发一次请求就记录实测路由 |
+| `.pi/api-tests/lib/route-coverage.ts` | 运行时路由覆盖记录器（覆盖事实来自真实请求，不是人肉声明） |
+| `.pi/api-tests/lib/failure.ts` | 失败三件套 `{code, message, diagnostic}` 与 `AssertionFailure` |
+| `.pi/api-tests/lib/assert.ts` | 四层断言（L1 Status, L2 Type Contract, L3 Deep Diff, L4 Semantic），每个失败都带错误码 |
 | `.pi/api-tests/lib/diff.ts` | 对象深层结构比较器（支持 Key 过滤与路径屏蔽） |
 | `.pi/api-tests/lib/context.ts` | Typed DAG Context 状态机变量传递与 Safe Teardown 逆序清理 |
 | `.pi/api-tests/lib/reporter.ts` | 收集结果，控制台输出 ANSI 高亮，自动生成 Markdown 汇总报表 |
@@ -114,6 +118,8 @@ recon(scout) -> inputs(api-fixture-scout) -> plan(planner) -> author(api-test-au
 | `.pi/api-tests/cases/*.test.ts` | 独立接口与多状态矩阵用例 |
 | `.pi/api-tests/scenarios/*.test.ts` | 完整业务生命周期 DAG 场景链（状态机流转与防漂移闭环） |
 | `.pi/api-tests/baselines/*.json` | L3 数据基线（归一化后的黄金数据） |
+| `.pi/api-tests/coverage-allowlist.json` | 路由覆盖豁免白名单（可选，每条必须写 `reason`） |
+| `.pi/api-tests/reports/route-coverage.json` | 实测路由覆盖快照，`coverage-check` 的判定依据 |
 | `.pi/secrets/api.env.local.json` | 凭据与环境变量，`chmod 600` |
 
 > 名称分层：`.pi/api-tests/` 是**测试套件**（代码产物），`.pi/secrets/` 是**凭据与环境变量**（运行时输入）。唯一硬约束：凭据只能落在 `.pi/secrets/`，绝不能内联进套件源码。
@@ -198,6 +204,10 @@ Gather 阶段收集的 `baseline_mode` 决定行为，`normalizeObject()` 先递
 
 ### 执行（本机 / CI 同一条命令）
 
+> 扩展自身的自检（校验知识库里那份 TS 参考实现是否真能跑，非测试套件）：
+> `bun scripts/verify-api-test-reference.ts`（或 `node scripts/...`），纯 TypeScript，无 shell/python 依赖。
+
+
 ```bash
 cd <repo>
 API_BASE_URL=https://api-baseline.internal \
@@ -260,6 +270,49 @@ bun run .pi/api-tests/runner.ts   # 或 npx tsx .pi/api-tests/runner.ts
 | `secret` | `true` 时该值在审计区、进度流、下游 stage 提示词、工具返回结果中一律打码为 `***`（真实值仍传给需要它的那一个 stage） |
 
 字段值通过 `{field:<name>}` 注入 stage 提示词。值缺失且无 `default` 时，Step 3 阻断并列出 `Allowed values`，不消耗任何 LLM token。
+
+### Gather 复用与探测（新增能力，不改上面的默认行为）
+
+`api-test` 现在在弹窗之前先做一轮**确定性探测**，已跑过的仓库不再被打扰：
+
+```text
+显式 fields → 探测(probe：读已有套件/凭据 → 扫仓库配置 → 真实探活) → envVar → fieldStore → discoverCmd → default → 才问
+```
+
+实测：**已有套件/凭据的仓库 0 提问**；**配置里能看出端口且服务在跑 0 提问**；**完全空白仓库只问 Base URL**；同仓库重复运行 0 提问（换模型不影响，信息在磁盘上）。
+
+| 工作流 JSON 新增键 | 作用 |
+| :--- | :--- |
+| `preDiscoverCmd` | 提问前运行的探测命令，stdout 输出字段 JSON（`{"api_base_url":"..."}`） |
+| `envFiles` | 按 `KEY=value` 或 JSON 解析（**不执行**）的配置文件列表，如 `.pi/secrets/api.env.local.json` |
+| `fieldStore` | 非密字段答案的持久化路径，默认 `.pi/orchestrator/fields.json` |
+| `fieldPrompts.<f>.envVar` | 从环境/配置文件读取（凭据走这里，不落盘） |
+| `fieldPrompts.<f>.discoverCmd` | 单字段确定性发现，stdout 为值；不在 `options` 内则忽略 |
+| `fieldPrompts.<f>.ask` | 有 `default` 时默认不弹窗，加 `true` 可强制弹 |
+| `fieldPrompts.<f>.persist` | 是否写入 fieldStore（`secret` 字段永不写入） |
+
+同时 `recon` 会先盘点既有 `.pi/api-tests/`，`author` 对已存在的套件只做**增量修改**（保留既有用例），并把本次解析出的请求配置写回 `.pi/secrets/api.env.local.json`。
+
+### 套件-代码同步门禁（防止旧的绿套件蒙混过关）
+
+`verify` 的 pass/fail 只能发现「错」，发现不了「漏」：改了接口、加了必填参数、放宽了断言时，旧套件依然全绿。所以 `verify` 的 gate 是两段式：
+
+```text
+runner.ts           ← 真正的接口测试，并在 finally 里落盘 reports/route-coverage.json（实测快照）
+      ↓ 无论通过与否都会执行
+coverage-check.ts   ← ① 改代码不改套件 → 失败 ② 改动的路由在实测快照里没有任何真实调用 → 失败
+```
+
+两段都跑，退出码取两者的与：测试失败时也会把覆盖结论一并暴露出来，不用等修好测试第二轮才发现漏测。
+
+失败会走 `onGateFail` 回环到 `author`，并把缺口清单（改动了哪些文件、哪些改动路由没有实测调用）作为失败文本喂给它，于是「没同步」变成可修复的硬失败而不是静默腐化。
+
+配套约束：
+
+- `author` 必须把 `coverage-check.ts` 按知识文件 §2.7 **逐字**落地；文件缺失同样判失败，不允许静默跳过门禁。
+- `recon` 先从 `git diff --name-only HEAD` 产出「改动路由清单」，`plan` 必须给出逐条 delta（新增用例 / 修改断言 / 删除用例 / 确认无需改动+理由）。
+- 覆盖判据看**实测**：`client` 记录每次真实请求，改动路由在快照里查不到调用就失败。改套件源码里的字符串冒充不了覆盖；正则只用来从 diff 的新增行里挑出"改动路由"，不参与"是否已覆盖"的判定。
+- 确属无需测试的路由写进 `coverage-allowlist.json` 的 `{pattern, reason}`，空 reason 不算豁免。
 
 ### 凭据与安全
 

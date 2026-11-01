@@ -76,6 +76,21 @@ export interface FieldPrompt {
 	default?: string;
 	/** Treat the value as a secret: redact it from the protocol audit, progress stream, and tool result. */
 	secret?: boolean;
+	/**
+	 * Environment variable to read this value from (after consulting the workflow's `envFiles`).
+	 * Ideal for credentials: the value is reused without being persisted anywhere.
+	 */
+	envVar?: string;
+	/** Deterministic shell command whose trimmed stdout becomes the value (e.g. derive from repo config). */
+	discoverCmd?: string;
+	/** Whether a resolved value is remembered in the field store (default: true; secrets are never persisted). */
+	persist?: boolean;
+	/**
+	 * Force an interactive prompt even when `default` is declared (default: false).
+	 * Without it, a declared default resolves the field silently — asking for a value
+	 * that already has a sane fallback is exactly the "it keeps asking me" failure mode.
+	 */
+	ask?: boolean;
 }
 
 /**
@@ -87,6 +102,19 @@ export interface WorkflowTemplate {
 	requiredFields: string[];
 	/** Optional per-field Gather (Step 3) prompts, keyed by field name. */
 	fieldPrompts?: Record<string, FieldPrompt>;
+	/**
+	 * Repo-relative files parsed (never executed) for `KEY=value` / `export KEY=value` during Gather.
+	 * Lets a workflow pick up configuration it generated on a previous run (e.g. `.pi/api-tests/env.local.sh`).
+	 */
+	envFiles?: string[];
+	/** Repo-relative path of the persisted field store (default: `.pi/orchestrator/fields.json`). */
+	fieldStore?: string;
+	/**
+	 * Deterministic pre-Gather probe: a shell command whose stdout is a JSON object of field
+	 * values (`{"api_base_url": "..."}`). Runs before the user is asked anything, so an
+	 * already-configured repo can resolve every field without a single prompt.
+	 */
+	preDiscoverCmd?: string;
 	/** Deterministic pre-flight shell checks run at Step 2 before any LLM call. */
 	preChecks: string[];
 	steps: WorkflowStep[];
@@ -159,6 +187,8 @@ export interface OrchestratorDetails {
 	task: string;
 	agentScope: AgentScope;
 	workspace?: WorkspaceDiscovery;
+	/** Step 3 (Gather) resolution source per required field, e.g. `env:API_TOKEN`, `remembered`, `prompted`. */
+	fieldSources?: Record<string, string>;
 	protocolSteps: ProtocolStepRecord[];
 	results: StageResult[];
 }

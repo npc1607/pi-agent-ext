@@ -121,8 +121,14 @@ function parseFieldPrompts(raw: unknown): Record<string, FieldPrompt> | undefine
 		const placeholder =
 			typeof item.placeholder === "string" && item.placeholder.trim() ? item.placeholder.trim() : undefined;
 		const defaultValue = typeof item.default === "string" && item.default.trim() ? item.default.trim() : undefined;
+		const envVar =
+			typeof item.envVar === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(item.envVar.trim())
+				? item.envVar.trim()
+				: undefined;
+		const discoverCmd =
+			typeof item.discoverCmd === "string" && item.discoverCmd.trim() ? item.discoverCmd.trim() : undefined;
 
-		if (!title && !options?.length && !placeholder && !defaultValue) continue;
+		if (!title && !options?.length && !placeholder && !defaultValue && !envVar && !discoverCmd) continue;
 
 		result[fieldName] = {
 			title,
@@ -130,6 +136,10 @@ function parseFieldPrompts(raw: unknown): Record<string, FieldPrompt> | undefine
 			placeholder,
 			default: defaultValue,
 			secret: item.secret === true || item.secret === "true",
+			envVar,
+			discoverCmd,
+			persist: item.persist === false || item.persist === "false" ? false : undefined,
+			ask: item.ask === true || item.ask === "true" ? true : undefined,
 		};
 	}
 
@@ -196,12 +206,22 @@ function loadWorkflowsFromDir(dir: string, source: "builtin" | "user" | "project
 			if (steps.length === 0) continue;
 
 			const fieldPrompts = parseFieldPrompts(raw.fieldPrompts);
+			const envFiles = parseStringList(raw.envFiles);
+			const fieldStore =
+				typeof raw.fieldStore === "string" && raw.fieldStore.trim() ? raw.fieldStore.trim() : undefined;
+			const preDiscoverCmd =
+				typeof raw.preDiscoverCmd === "string" && raw.preDiscoverCmd.trim()
+					? raw.preDiscoverCmd.trim()
+					: undefined;
 
 			workflows.push({
 				name: raw.name.trim(),
 				description: raw.description.trim(),
 				requiredFields: parseStringList(raw.requiredFields),
 				fieldPrompts,
+				envFiles: envFiles.length > 0 ? envFiles : undefined,
+				fieldStore,
+				preDiscoverCmd,
 				preChecks: parseStringList(raw.preChecks),
 				steps,
 				source,
