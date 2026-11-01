@@ -99,6 +99,42 @@ func TestSendMessageBody(t *testing.T) {
 	}
 }
 
+func TestSendMessageDefaults(t *testing.T) {
+	t.Run("TC-MSG-001 defaults", func(t *testing.T) {
+		const input = "receiveID=u1, content=hi, receiveIDType=, msgType="
+		var gotQuery string
+		var gotBody map[string]any
+		c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			gotQuery = r.URL.Query().Get("receive_id_type")
+			raw, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Errorf("SendMessage(%s): got body read error = %v, want nil", input, err)
+			}
+			if err := json.Unmarshal(raw, &gotBody); err != nil {
+				t.Errorf("SendMessage(%s): got invalid JSON body = %q, want valid JSON: %v", input, raw, err)
+			}
+			writeJSON(w, map[string]any{"code": 0, "data": map[string]any{"message_id": "m1"}})
+		})
+
+		res, err := c.SendMessage(context.Background(), "u1", "hi", "", "")
+		if err != nil {
+			t.Fatalf("SendMessage(%s): got error = %v, want nil", input, err)
+		}
+		if gotQuery != "email" {
+			t.Errorf("SendMessage(%s): got receive_id_type = %q, want %q", input, gotQuery, "email")
+		}
+		if got := gotBody["msg_type"]; got != "text" {
+			t.Errorf("SendMessage(%s): got msg_type = %v, want %q", input, got, "text")
+		}
+		if got := gotBody["content"]; got != `{"text":"hi"}` {
+			t.Errorf("SendMessage(%s): got content = %v, want %q", input, got, `{"text":"hi"}`)
+		}
+		if res == nil || res.MessageID != "m1" {
+			t.Errorf("SendMessage(%s): got result = %+v, want MessageID = %q", input, res, "m1")
+		}
+	})
+}
+
 func TestSendMessageRejectsUnknownTypes(t *testing.T) {
 	var hits int64
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
