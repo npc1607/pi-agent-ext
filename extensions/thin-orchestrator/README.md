@@ -1,6 +1,6 @@
 # Thin Orchestrator (`thin-orchestrator`)
 
-A deterministic multi-agent orchestration extension for [Pi](https://github.com/earendil-works/pi), implementing **Meta's Thin Orchestrator Pattern** (*The Thin Orchestrator: How We Made Our AI Agents More Reliable by Giving the Router Less to Do*, Oct 2026) and **Google's Harness²** on-demand component isolation principles.
+A deterministic multi-agent orchestration extension for [Pi](https://github.com/earendil-works/pi), implementing **Meta's Thin Orchestrator Pattern** (*The Thin Orchestrator: How We Made Our AI Agents More Reliable by Giving the Router Less to Do*, Oct 2026), **Google's Harness²** on-demand component isolation principles, and **HarnessMM** (*Harness Minus Minus: Recursive Self-Improvement for Harness Token Efficiency*, arXiv:2610.32813) guarded decision reuse and certified callback substitution.
 
 ## Why a Thin Orchestrator?
 
@@ -21,7 +21,7 @@ Every request through `thin_orchestrator` executes Meta's 7-step protocol:
 | **3** | **Gather** | Deterministic | Verify `requiredFields` (`required_fields`); prompt interactively via `ctx.ui.select` / `ctx.ui.input` if missing |
 | **4** | **Auto-discover** | Deterministic | Infer git repo root, branch, dirty files, language stack, and `go.mod` module path |
 | **5** | **Reliability Gate** | Deterministic | Verify project trust and pre-execution safety constraints |
-| **6** | **Delegate** | **LLM (Isolated)** | Spawn isolated `pi` subprocesses per stage with runtime-injected `knowledge/*.md` |
+| **6** | **Delegate** | **LLM (Isolated)** / **HarnessMM CCS** | Check GDR guards; execute native action via CCS if eligible (omitting slow LLM callback), or spawn isolated `pi` specialist subprocess |
 | **7** | **Handle** | Deterministic | Run post-stage `gateCmd` (e.g., `git diff --check`), auto-retry on gate failure, and aggregate telemetry |
 
 ## Directory Structure
@@ -323,3 +323,58 @@ coverage-check.ts   ← ① 改代码不改套件 → 失败 ② 改动的路由
 ### Behaviour change for existing workflows
 
 Because `GATE_STATUS: FAIL` now aborts a stage, `bugfix` / `feature` / `review-and-fix` stop at the verifier instead of continuing to the reviewer when verification fails. That is intentional: a silently-passing verification gate was the previous failure mode. Add an `onGateFail` block to any workflow that should repair instead of abort.
+
+---
+
+## HarnessMM: Guarded Decision Reuse (GDR) & Certified Callback Substitution (CCS)
+
+Following arXiv:2610.32813 (*HarnessMM: Recursive Self-Improvement for Harness Token Efficiency*), `thin-orchestrator` incorporates guarded decision reuse and certified callback substitution to reduce repetitive LLM reasoning calls across workflow stages.
+
+### 1. The Core Problem & Substitution Paradox
+
+In multi-stage workflows (e.g., `scout` → `planner` → `implementer` → `verifier`), earlier slow reasoning stages often **already fix the exact next action and its literal arguments** (such as running `go test ./...` or `npm test`). In conventional orchestrators, every stage blindly spawns an LLM subagent, paying full prompt and reasoning tokens simply to review an already-decided deterministic action.
+
+HarnessMM introduces:
+- **EDG (Executable Decision Graph)**: Action and literal arguments are fully closed and attached with public execution guards.
+- **GDR (Guarded Decision Reuse)**: Checks whether public receipts (predecessor gates, stdout pattern, probe exit codes) satisfy the guards.
+- **CCS (Certified Callback Substitution)**: Executes the action natively via host interface and issues a cryptographic certificate $\kappa_t$, proving physical omission of the slow LLM callback.
+- **Substitution Paradox ($C_{\text{removed}} > C_{\text{introduced}}$)**: Because `thin-orchestrator`'s GDR checks are deterministic TypeScript (0 model tokens), every bypassed callback achieves 100% net token reduction.
+
+### 2. Workflow Step Configuration
+
+Add an optional `guardedAction` to any `WorkflowStep` in your workflow JSON:
+
+```json
+{
+  "id": "verify",
+  "agent": "verifier",
+  "taskTemplate": "## Workspace Context\n{workspace}\n\n## Verification Failure\n{gate_error}\n\nAnalyze and fix the issue.",
+  "guardedAction": {
+    "guard": {
+      "predecessorGatePassed": true,
+      "outputMatches": "Implemented|Fixed|Success"
+    },
+    "actionCmd": "go test -v ./... -count=1",
+    "timeoutMs": 60000,
+    "description": "Run unit and regression test suite natively if implementation succeeded"
+  }
+}
+```
+
+#### Fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `guard.predecessorGatePassed` | `boolean` (default: `true`) | Require the immediate prior stage's gate to have passed cleanly. |
+| `guard.outputMatches` | `string` (regex) | Regex pattern that prior stage's output must match. |
+| `guard.readinessCheckCmd` | `string` (shell) | Quick deterministic shell probe that must exit 0. |
+| `actionCmd` | `string` (shell) | Literal shell command to execute. Supports `{task}`, `{previous}`, `{step:<id>}`, `{workspace}`, `{field:<name>}`. |
+| `timeoutMs` | `number` (default: `30000`) | Native execution timeout in ms. |
+| `description` | `string` | Rationale recorded in audit trails and substitution certificates. |
+
+### 3. Execution & Transparent Fallback
+
+1. **Eligibility Check**: Before delegating to the specialist subagent, the orchestrator evaluates all declared guards against actual prior receipts.
+2. **Native Dispatch**: If eligible, the action is executed natively via `runDeterministicShellCheck`.
+3. **Certified Substitution**: If the command exits 0 and any declared `gateCmd` passes, a `SubstitutionCertificate` is issued and the LLM specialist subprocess is **completely bypassed** (0 token cost).
+4. **Transparent Fallback**: If guards are unmet or the command fails (exit $\neq 0$), control immediately falls back to waking the slow LLM specialist, injecting the command's stderr into `{gate_error}` so the LLM can diagnose and resolve the issue. Quality is strictly preserved ($R_b(\pi) \leq \epsilon_b$).

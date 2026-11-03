@@ -19,7 +19,14 @@
     {
       "id": "verify",
       "agent": "verifier",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Applied Fixes\n{step:fix}\n\nVerify build and tests pass after the review fixes."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Applied Fixes\n{step:fix}\n\nVerify build and tests pass after the review fixes.",
+      "guardedAction": {
+        "guard": {
+          "predecessorGatePassed": true
+        },
+        "actionCmd": "{field:verify_cmd}",
+        "description": "Run verified test command natively if specified in fields"
+      }
     }
   ]
 }

@@ -27,6 +27,36 @@ export interface SpecialistAgent {
 	source: "builtin" | "user" | "project";
 	filePath: string;
 }
+/**
+ * Public execution guard conditions (HarnessMM GDR).
+ * All declared checks must pass for the stored action to execute.
+ */
+export interface GuardConditions {
+	/** Require predecessor stage gate to have passed (default: true). */
+	predecessorGatePassed?: boolean;
+	/** Regex pattern that prior stage output must match. */
+	outputMatches?: string;
+	/** Fast deterministic shell check that must exit 0 before running the action. */
+	readinessCheckCmd?: string;
+}
+
+/**
+ * HarnessMM Executable Decision Graph (EDG) Guarded Action node.
+ * Stores a resolved literal command and public execution guard at the model-tool boundary.
+ */
+export interface GuardedAction {
+	/** Public execution guard conditions evaluated against observed receipts. */
+	guard?: GuardConditions;
+	/**
+	 * Exact literal shell command to execute directly through host runtime.
+	 * Supports template interpolation: {task}, {previous}, {step:<id>}, {workspace}, {field:<name>}.
+	 */
+	actionCmd: string;
+	/** Timeout in milliseconds (default: 30000, clamped to 1000..1800000). */
+	timeoutMs?: number;
+	/** Human-readable rationale for telemetry and audit. */
+	description?: string;
+}
 
 /**
  * A single stage in a deterministic Workflow Template state machine.
@@ -59,6 +89,13 @@ export interface WorkflowStep {
 		/** Maximum loop-backs for this stage (default: 1, clamped to 0..3). 0 disables looping. */
 		maxLoops?: number;
 	};
+	/**
+	 * HarnessMM: Guarded Decision Reuse (GDR) & Certified Callback Substitution (CCS).
+	 * If declared and public guards pass on prior receipts, the orchestrator executes
+	 * `actionCmd` natively, bypassing the expensive LLM specialist subprocess.
+	 * On guard rejection or action failure, it transparently falls back to the specialist.
+	 */
+	guardedAction?: GuardedAction;
 }
 
 /**
@@ -159,6 +196,28 @@ export interface UsageStats {
 	turns: number;
 }
 
+/**
+ * HarnessMM: Certified Callback Substitution (CCS) receipt certificate.
+ * Audits exact native execution and proves physical omission of the slow LLM callback.
+ */
+export interface SubstitutionCertificate {
+	/** Fingerprint of the executed command & guard specification. */
+	graphHash: string;
+	/** Decision node identifier (corresponds to stepId). */
+	decisionId: string;
+	/** Exact literal command dispatched to the native interface. */
+	actionCmd: string;
+	/** Native execution exit code (must be 0 for valid substitution). */
+	exitCode: number;
+	/** Duration of deterministic execution in milliseconds. */
+	durationMs: number;
+	/** Name of the specialist agent whose LLM callback was omitted. */
+	bypassedAgent: string;
+	/** Reason / guard description that authorized the substitution. */
+	reason: string;
+	/** Native execution stdout/stderr output. */
+	output: string;
+}
 export interface StageResult {
 	stepIndex: number;
 	stepId: string;
@@ -179,6 +238,8 @@ export interface StageResult {
 	gateOutput?: string;
 	/** Explicit `GATE_STATUS: PASS|FAIL` line reported by the specialist in its final message. */
 	reportedGateStatus?: "PASS" | "FAIL";
+	/** HarnessMM: Certified Callback Substitution record when native execution omitted the LLM callback. */
+	substitution?: SubstitutionCertificate;
 }
 
 export interface OrchestratorDetails {
@@ -191,4 +252,6 @@ export interface OrchestratorDetails {
 	fieldSources?: Record<string, string>;
 	protocolSteps: ProtocolStepRecord[];
 	results: StageResult[];
+	/** Total slow LLM callbacks bypassed via HarnessMM Certified Callback Substitution. */
+	bypassedCallbacks?: number;
 }

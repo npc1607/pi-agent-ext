@@ -36,7 +36,14 @@
     {
       "id": "verify",
       "agent": "verifier",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nVerify compilation and run relevant unit tests, including the newly added regression tests."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Bug Description\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nVerify compilation and run relevant unit tests, including the newly added regression tests.",
+      "guardedAction": {
+        "guard": {
+          "predecessorGatePassed": true
+        },
+        "actionCmd": "{field:verify_cmd}",
+        "description": "Run verified test command natively if specified in fields"
+      }
     },
     {
       "id": "review",

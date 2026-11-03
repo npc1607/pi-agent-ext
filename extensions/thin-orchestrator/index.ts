@@ -383,11 +383,14 @@ export default function (pi: ExtensionAPI) {
 								? theme.fg("success", " [SIGNAL: PASS]")
 								: "";
 					const retryBadge = r.attempts > 1 ? theme.fg("warning", ` (attempt ${r.attempts})`) : "";
+					const ccsBadge = r.substitution
+						? theme.fg("success", ` [CCS✓ BYPASS: ${r.substitution.graphHash}]`)
+						: "";
 
 					container.addChild(new Spacer(1));
 					container.addChild(
 						new Text(
-							`${theme.fg("muted", `─── Stage ${r.stepIndex} (${r.stepId}): `)}${theme.fg("accent", r.agent)} ${rIcon}${retryBadge}${kBadge}${gateBadge}${signalBadge}`,
+							`${theme.fg("muted", `─── Stage ${r.stepIndex} (${r.stepId}): `)}${theme.fg("accent", r.agent)} ${rIcon}${retryBadge}${ccsBadge}${kBadge}${gateBadge}${signalBadge}`,
 							0,
 							0,
 						),
@@ -420,7 +423,10 @@ export default function (pi: ExtensionAPI) {
 				const totalUsage = formatUsageStats(aggregateUsage(details.results));
 				if (totalUsage) {
 					container.addChild(new Spacer(1));
-					container.addChild(new Text(theme.fg("dim", `Total Telemetry: ${totalUsage}`), 0, 0));
+					const bypassed = details.bypassedCallbacks
+						? ` • HarnessMM: ${details.bypassedCallbacks} slow callback(s) omitted`
+						: "";
+					container.addChild(new Text(theme.fg("dim", `Total Telemetry: ${totalUsage}${bypassed}`), 0, 0));
 				}
 				return container;
 			}
@@ -444,7 +450,8 @@ export default function (pi: ExtensionAPI) {
 						: theme.fg("error", " [GATE✗]")
 					: "";
 
-				text += `\n\n${theme.fg("muted", `─── ${r.stepIndex}. ${r.stepId} → `)}${theme.fg("accent", r.agent)} ${rIcon}${kCount}${gateBadge}`;
+				const ccsBadge = r.substitution ? theme.fg("success", " [CCS✓]") : "";
+				text += `\n\n${theme.fg("muted", `─── ${r.stepIndex}. ${r.stepId} → `)}${theme.fg("accent", r.agent)} ${rIcon}${ccsBadge}${kCount}${gateBadge}`;
 
 				const displayItems = getDisplayItems(r.messages);
 				if (displayItems.length === 0) {
@@ -467,7 +474,10 @@ export default function (pi: ExtensionAPI) {
 
 			const totalUsage = formatUsageStats(aggregateUsage(details.results));
 			if (totalUsage) {
-				text += `\n\n${theme.fg("dim", `Total: ${totalUsage}`)}`;
+				const bypassed = details.bypassedCallbacks
+					? ` • HarnessMM: ${details.bypassedCallbacks} callback(s) omitted`
+					: "";
+				text += `\n\n${theme.fg("dim", `Total: ${totalUsage}${bypassed}`)}`;
 			}
 			text += `\n${theme.fg("muted", "(Ctrl+O to expand full 7-step audit & specialist outputs)")}`;
 			return new Text(text, 0, 0);

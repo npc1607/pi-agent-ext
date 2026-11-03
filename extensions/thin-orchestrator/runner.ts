@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -13,6 +14,8 @@ import {
 	resolveSpecialistSkills,
 } from "./discovery.ts";
 import type {
+	GuardedAction,
+	SubstitutionCertificate,
 	AgentScope,
 	FieldPrompt,
 	OrchestratorDetails,
@@ -201,6 +204,184 @@ export function renderTaskTemplate(
 	}
 
 	return rendered;
+}
+
+/**
+ * Result of evaluating a HarnessMM Guarded Decision Reuse (GDR) check.
+ */
+export interface GDREvaluation {
+	eligible: boolean;
+	resolvedCmd?: string;
+	reason: string;
+}
+
+/**
+ * HarnessMM: Guarded Decision Reuse (GDR) eligibility evaluator.
+ * Determines whether a stored action's execution guards are satisfied by observed receipts.
+ */
+export function evaluateGuardedActionEligibility(
+	step: WorkflowStep,
+	opts: {
+		cwd: string;
+		workspace: WorkspaceDiscovery;
+		fields: Record<string, string>;
+		previousOutput: string;
+		stepOutputs: Map<string, string>;
+		task: string;
+		previousStageResult?: StageResult;
+	},
+): GDREvaluation {
+	const guarded = step.guardedAction;
+	if (!guarded) {
+		return { eligible: false, reason: "No guardedAction declared on step" };
+	}
+
+	const guard = guarded.guard ?? {};
+
+	// 1. Guard Check: Predecessor Stage Gate
+	// By default, require the immediate predecessor stage to have passed cleanly.
+	if (guard.predecessorGatePassed !== false && opts.previousStageResult) {
+		if (isStageFailed(opts.previousStageResult)) {
+			return { eligible: false, reason: "Predecessor stage failed or did not pass its gate" };
+		}
+	}
+
+	// 2. Guard Check: Output Pattern Match (if specified)
+	if (guard.outputMatches) {
+		try {
+			const reg = new RegExp(guard.outputMatches, "m");
+			if (!reg.test(opts.previousOutput)) {
+				return { eligible: false, reason: `Previous output did not match guard pattern: ${guard.outputMatches}` };
+			}
+		} catch (e: any) {
+			return { eligible: false, reason: `Invalid guard regex pattern: ${e.message}` };
+		}
+	}
+
+	// 3. Guard Check: Deterministic Readiness Probe (if specified)
+	if (guard.readinessCheckCmd) {
+		const renderedProbe = renderTaskTemplate(guard.readinessCheckCmd, {
+			task: opts.task,
+			previous: opts.previousOutput,
+			stepOutputs: opts.stepOutputs,
+			workspace: opts.workspace,
+			fields: opts.fields,
+		}).trim();
+		const probeRes = runDeterministicShellCheck(renderedProbe, opts.cwd, 10_000);
+		if (!probeRes.passed) {
+			return { eligible: false, reason: `Readiness check command failed: ${probeRes.output.slice(0, 120)}` };
+		}
+	}
+
+	// 4. Literal Argument Closure: resolve actionCmd and verify no unreplaced placeholders
+	const resolvedCmd = renderTaskTemplate(guarded.actionCmd, {
+		task: opts.task,
+		previous: opts.previousOutput,
+		stepOutputs: opts.stepOutputs,
+		workspace: opts.workspace,
+		fields: opts.fields,
+	}).trim();
+
+	if (!resolvedCmd) {
+		return { eligible: false, reason: "Resolved action command is empty" };
+	}
+
+	// Reject if any template variable failed to resolve (e.g. {field:missing})
+	if (
+		/\{(field|step):[a-zA-Z0-9_-]+\}/.test(resolvedCmd) ||
+		resolvedCmd.includes("(unspecified)") ||
+		resolvedCmd.includes("(not available)")
+	) {
+		return { eligible: false, reason: "Action command has unclosed placeholder arguments" };
+	}
+
+	return {
+		eligible: true,
+		resolvedCmd,
+		reason: guarded.description || "All declared execution guards satisfied",
+	};
+}
+
+/**
+ * HarnessMM: Certified Callback Substitution (CCS) executor.
+ * Dispatches the resolved action through host native interface and issues a substitution certificate,
+ * physically omitting the expensive slow LLM specialist invocation.
+ */
+export function executeCertifiedCallbackSubstitution(opts: {
+	cwd: string;
+	step: WorkflowStep;
+	specialist: SpecialistAgent;
+	stepIndex: number;
+	resolvedCmd: string;
+	reason: string;
+	secretValues?: string[];
+}): StageResult {
+	const tStart = Date.now();
+	const timeoutMs = opts.step.guardedAction?.timeoutMs ?? 30_000;
+	const shellRes = runDeterministicShellCheck(opts.resolvedCmd, opts.cwd, timeoutMs);
+	const durationMs = Date.now() - tStart;
+	const graphHash = crypto.createHash("sha256").update(opts.resolvedCmd).digest("hex").slice(0, 12);
+
+	const cert: SubstitutionCertificate = {
+		graphHash,
+		decisionId: opts.step.id,
+		actionCmd: opts.resolvedCmd,
+		exitCode: shellRes.passed ? 0 : 1,
+		durationMs,
+		bypassedAgent: opts.specialist.name,
+		reason: opts.reason,
+		output: shellRes.output,
+	};
+
+	const redactedCmd = redactSecrets(opts.resolvedCmd, opts.secretValues);
+	const redactedOutput = redactSecrets(shellRes.output, opts.secretValues);
+
+	const stageResult: StageResult = {
+		stepIndex: opts.stepIndex,
+		stepId: opts.step.id,
+		agent: opts.specialist.name,
+		agentSource: opts.specialist.source,
+		task: `[HarnessMM CCS] ${redactedCmd}`,
+		knowledgeLoaded: [],
+		exitCode: shellRes.passed ? 0 : 1,
+		messages: [
+			{
+				role: "assistant",
+				content: [
+					{
+						type: "text",
+						text: `[HarnessMM Certified Callback Substitution]\nAction: \`${redactedCmd}\`\nOmitted LLM Callback: \`${opts.specialist.name}\`\nCertificate: ${graphHash}\nDuration: ${durationMs}ms\n\nExecution Output:\n\`\`\`\n${redactedOutput}\n\`\`\``,
+					},
+				],
+			},
+		],
+		stderr: shellRes.passed ? "" : shellRes.output,
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: 0,
+			contextTokens: 0,
+			turns: 0,
+		},
+		attempts: 1,
+		substitution: cert,
+	};
+
+	// Deterministic post-stage gate check (Step 7 Handle parity)
+	const effectiveGate = opts.step.gateCmd ?? opts.specialist.postGateCmd;
+	if (effectiveGate && shellRes.passed) {
+		const gateRes = runDeterministicShellCheck(effectiveGate, opts.cwd, opts.step.gateTimeoutMs);
+		stageResult.gateCmd = effectiveGate;
+		stageResult.gatePassed = gateRes.passed;
+		stageResult.gateOutput = gateRes.output;
+	} else if (effectiveGate) {
+		stageResult.gateCmd = effectiveGate;
+		stageResult.gatePassed = false;
+	}
+
+	return stageResult;
 }
 
 /**
@@ -577,6 +758,7 @@ export async function runThinOrchestratorProtocol(opts: {
 	let workspace: WorkspaceDiscovery | undefined;
 	/** How each required field was resolved in Step 3 (explicit / env:* / remembered / discovered / prompted / default). */
 	let fieldSourcesResolved: Record<string, string> | undefined;
+	let bypassedCallbacksCount = 0;
 
 	const makeDetails = (): OrchestratorDetails => ({
 		mode,
@@ -587,6 +769,7 @@ export async function runThinOrchestratorProtocol(opts: {
 		protocolSteps: protocolSteps.map((s) => ({ ...s })),
 		fieldSources: fieldSourcesResolved ? { ...fieldSourcesResolved } : undefined,
 		results: [...results],
+		bypassedCallbacks: bypassedCallbacksCount,
 	});
 
 	const emitProgress = (statusText: string) => {
@@ -1103,6 +1286,53 @@ export async function runThinOrchestratorProtocol(opts: {
 			const isRepairPass = gateError !== undefined;
 			let finalStageResult: StageResult | undefined;
 
+			// =========================================================================
+			// HarnessMM: Guarded Decision Reuse (GDR) & Certified Callback Substitution (CCS)
+			// =========================================================================
+			if (!isRepairPass && step.guardedAction) {
+				const prevResult = position > 0 ? results[position - 1] : undefined;
+				const gdr = evaluateGuardedActionEligibility(step, {
+					cwd: ctx.cwd,
+					workspace: workspace!,
+					fields: gatheredFields,
+					previousOutput,
+					stepOutputs,
+					task,
+					previousStageResult: prevResult,
+				});
+
+				if (gdr.eligible && gdr.resolvedCmd) {
+					emitProgress(`Step 6/7 (HarnessMM GDR): Guard passed for [${step.id}] → executing native action \`${gdr.resolvedCmd}\`...`);
+					const ccsResult = executeCertifiedCallbackSubstitution({
+						cwd: ctx.cwd,
+						step,
+						specialist: spec,
+						stepIndex: position + 1,
+						resolvedCmd: gdr.resolvedCmd,
+						reason: gdr.reason,
+						secretValues,
+					});
+
+					if (!isStageFailed(ccsResult)) {
+						// Certified substitution succeeded: physical omission of slow LLM specialist callback
+						results[position] = ccsResult;
+						finalStageResult = ccsResult;
+						bypassedCallbacksCount++;
+						emitProgress(`Step 6/7 (HarnessMM CCS): Omitted slow LLM callback for \`${spec.name}\` (${ccsResult.substitution?.durationMs}ms)`);
+
+						const stageText = redact(getFinalAssistantText(ccsResult.messages));
+						stepOutputs.set(step.id, stageText);
+						previousOutput = stageText;
+						cursor++;
+						continue;
+					}
+
+					// Transparent Fallback to Slow Actor: inject error feedback so specialist can diagnose
+					const actionErr = ccsResult.gateOutput || ccsResult.stderr || "Native command failed";
+					gateError = `[HarnessMM Guarded Action Fallback]\nNative action \`${gdr.resolvedCmd}\` failed with exit code ${ccsResult.exitCode}:\n${actionErr}\nAnalyze root cause and resolve.`;
+					emitProgress(`Step 6/7 (HarnessMM Fallback): Guarded action failed, waking slow actor \`${spec.name}\`...`);
+				}
+			}
 			while (attempt <= maxRetries) {
 				attempt++;
 				const renderedTask = renderTaskTemplate(step.taskTemplate, {
@@ -1219,7 +1449,7 @@ export async function runThinOrchestratorProtocol(opts: {
 	protocolSteps[5].durationMs = Date.now() - t6;
 	protocolSteps[5].summary = `Completed ${results.length} isolated specialist stage(s)${
 		totalLoopBacks > 0 ? `, ${totalLoopBacks} repair loop(s)` : ""
-	}`;
+	}${bypassedCallbacksCount > 0 ? `, ${bypassedCallbacksCount} callback(s) bypassed via HarnessMM CCS` : ""}`;
 
 	// =========================================================================
 	// STEP 7: HANDLE (Deterministic) — Aggregate results, verify gates, surface summary
@@ -1241,7 +1471,8 @@ export async function runThinOrchestratorProtocol(opts: {
 		const statusLabel = isStageFailed(r) ? "FAILED" : "COMPLETED";
 		const gateBadge = r.gateCmd ? (r.gatePassed ? " [GATE PASS]" : " [GATE FAIL]") : "";
 		const signalBadge = r.reportedGateStatus === "FAIL" ? " [SIGNAL FAIL]" : "";
-		return `### Stage ${r.stepIndex}: \`${r.stepId}\` → Specialist \`${r.agent}\` (${statusLabel}${gateBadge}${signalBadge})\n\n${redact(getStageOutput(r))}`;
+		const ccsBadge = r.substitution ? ` [CCS✓ BYPASS: ${r.substitution.graphHash}]` : "";
+		return `### Stage ${r.stepIndex}: \`${r.stepId}\` → Specialist \`${r.agent}\` (${statusLabel}${gateBadge}${signalBadge}${ccsBadge})\n\n${redact(getStageOutput(r))}`;
 	});
 
 	const headerTitle =

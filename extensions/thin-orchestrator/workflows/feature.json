@@ -36,7 +36,14 @@
     {
       "id": "verify",
       "agent": "verifier",
-      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nRun build and test verification, including the newly added tests."
+      "taskTemplate": "## Workspace Context\n{workspace}\n\n## Feature Request\n{task}\n\n## Implementation Summary\n{step:implement}\n\n## Test Implementation Summary\n{step:implement-tests}\n\nRun build and test verification, including the newly added tests.",
+      "guardedAction": {
+        "guard": {
+          "predecessorGatePassed": true
+        },
+        "actionCmd": "{field:verify_cmd}",
+        "description": "Run verified test command natively if specified in fields"
+      }
     },
     {
       "id": "review",
