@@ -50,11 +50,23 @@ An approval guard for pi: every `edit` / `write` file change and every non-allow
 
   | Tier | Behavior | Examples |
   |---|---|---|
-  | 🟢 Allow-listed | Runs silently | `ls`, `rg`, `cat`, `go build/test/run`, `make`, `kill`, `mkdir/cp/mv`, `git status/diff/add/commit/pull/rebase`, `glab mr list/view`, `curl` to `localhost` or GET-only |
+  | 🟢 Allow-listed | Runs silently | `ls`, `rg`, `cat`, `go build/test/run`, `make`, `kill`, `mkdir/cp/mv`, `python3`/`node`/`bun` inline code (`-c`, `-e`, heredoc), `git status/diff/add/commit/pull/rebase/merge-base/ls-tree`, `glab mr list/view`, `curl` to `localhost` or GET-only |
   | 🔴 Danger-listed | Confirmed with a specific dialog | `rm` (any form), `git push` (incl. force), `git reset/clean/restore/checkout -- <path>/branch -D/stash drop`, `sudo`, `ssh/scp/rsync`, `curl -X POST/PUT/PATCH/DELETE` to non-local hosts, `glab` write actions |
-  | ⚡ Unknown | Confirmed generically | anything not in either list, shell redirections (`>`), command substitution `$(...)` |
+  | ⚡ Unknown | Confirmed generically | anything not in either list, `bash`/`source`/`xargs`, and `>` redirects that target anything but a scratch path |
 
-  Also allow-listed as safe segments: `cd` / `pushd` / `popd` (navigation), `tee`, `obsidian`, and harmless stderr redirects (`2>&1`, `2>/dev/null`).
+  Shell-level constructs are resolved instead of blanket-blocked:
+
+  | Construct | Behavior |
+  |---|---|
+  | `2>&1`, `2>/dev/null`, `> /dev/null` | Verdict decided by the command itself |
+  | `> /tmp/x`, `>> /var/folders/...` | Passes — scratch sinks only |
+  | `> repo/file`, `>> file` | Confirmed as `Command (writes a file)` |
+  | `$(cmd)` / `` `cmd` `` / `<(cmd)` | Recurses: the inner command decides |
+  | `$NAME`, `${NAME}`, `$?` | Passes — plain expansion |
+  | `<<'EOF'` heredoc | Payload is stdin, never re-classified as shell |
+  | `for …; do …; done`, `if`/`while` bodies | Keyword stripped, body classified as its own segment |
+
+  Also allow-listed as safe segments: `cd` / `pushd` / `popd` (navigation), `tee`, `obsidian`, `mktemp`, `export`/`unset`/`declare` (shell variables only), and read-only inspectors (`nl`, `od`, `strings`, `xxd`, `hexdump`, `netstat`, `ifconfig`, `pgrep`, `mktemp`).
 
 #### Install
 

@@ -20,17 +20,21 @@ const PASS_EXECUTABLES = new Set([
   "tree", "ps", "lsof", "uname", "hostname", "whoami", "id", "printenv", "basename",
   "dirname", "realpath", "readlink", "open", "diff", "cmp", "shasum", "md5", "sleep",
   "true", "false", "seq", "bc", "column", "cut", "sort", "uniq", "tr", "sed", "awk",
-  "pandoc",
+  "pandoc", "nl", "od", "strings", "xxd", "hexdump", "netstat", "ifconfig",
+  "mktemp", "test", "[", "[[",
+  "uptime", "pgrep", "vm_stat", "sw_vers",
   // local build / dev workflow
   "go", "make", "gofmt", "golangci-lint", "air",
   // local process management (dev servers)
   "kill", "pkill",
   // local file ops (recoverable via git inside projects)
-  "mkdir", "touch", "cp", "mv",
+  "mkdir", "touch", "cp", "mv", "chmod", "ln",
   // log-friendly pipe sink
   "tee",
   // vault CLI — writing the vault is its purpose
   "obsidian",
+  // inline code: `-c` / `-e` / heredoc scripts are one class, approved together
+  "python3", "python", "node", "bun", "deno", "ruby", "perl",
 ]);
 
 /** git sub-commands that pass. Others (push/rm/clean/...) are danger-listed. */
@@ -39,6 +43,9 @@ const GIT_PASS = new Set([
   "switch", "pull", "fetch", "merge", "rebase", "cherry-pick", "remote", "describe",
   "rev-parse", "blame", "grep", "reflog", "worktree", "init", "clone", "mv", "am",
   "apply", "format-patch", "shortlog", "archive", "bisect", "stage", "unstage", "gc",
+  "merge-base", "merge-tree", "rev-list", "cat-file", "for-each-ref", "show-ref",
+  "symbolic-ref", "check-ignore", "var", "range-diff", "verify-commit", "verify-tag",
+  "ls-tree", "hash-object", "notes", "mktree",
 ]);
 
 /** glab write actions that must be confirmed. */
@@ -49,13 +56,29 @@ const GLAB_RISKY = new Set([
 
 const CURL_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/** Shell structure keywords: they run nothing themselves, the body is a separate segment. */
+const SHELL_KEYWORDS = new Set([
+  "do", "done", "then", "elif", "else", "fi", "esac", "if", "while", "until",
+  "{", "}", "!", "time",
+]);
+
+/** Builtins that only touch shell variables in this invocation. */
+const VAR_BUILTINS = new Set(["export", "unset", "local", "declare", "readonly", "typeset"]);
+
 /** Strip leading env-var assignments and common wrappers (env, nohup, nice, timeout N). */
 function stripPrefixes(words: string[]): string[] {
   let i = 0;
   const isAssign = (w: string) => /^[A-Za-z_][A-Za-z0-9_]*=/.test(w);
   while (i < words.length && isAssign(words[i])) i++;
+  if (words[i] === "command" && (words[i + 1] === "-v" || words[i + 1] === "-V")) {
+    return []; // `command -v foo` only reports where foo lives
+  }
   if (words[i] === "env") {
     i++;
+    // `env -u NAME -i ... cmd` — flags come before the assignments they precede.
+    while (i < words.length && words[i].startsWith("-")) {
+      i += ["-u", "--unset", "-C", "--chdir"].includes(words[i]) ? 2 : 1;
+    }
     while (i < words.length && isAssign(words[i])) i++;
   }
   const wrappers = new Set(["nohup", "nice"]);
@@ -171,6 +194,7 @@ function classifyGit(words: string[]): SegmentVerdict {
       }
       return { action: "allow" };
     default:
+      if (sub === "") return { action: "allow" }; // `git --version`
       return GIT_PASS.has(sub) ? { action: "allow" } : { action: "confirm", kind: "command", title: "Approve command?", label: "Command (not allow-listed):" };
   }
 }
@@ -189,9 +213,78 @@ function classifyGlab(words: string[]): SegmentVerdict {
   return { action: "allow" };
 }
 
+/** Split a segment into shell words, keeping quotes, `$( )` and backticks intact. */
+function splitWords(segment: string): string[] {
+  const words: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if ((ch === "$" && segment[i + 1] === "(") || ch === "`") {
+      const end = ch === "`" ? segment.indexOf("`", i + 1) : matchParen(segment, i + 1);
+      const stop = end === -1 ? segment.length - 1 : end;
+      current += segment.slice(i, stop + 1);
+      i = stop;
+      continue;
+    }
+    // `NAME=(a b c)` is one assignment, not an executable followed by junk.
+    if (ch === "(" && current.endsWith("=")) {
+      const end = matchParen(segment, i);
+      current += segment.slice(i, end + 1);
+      i = end;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (current) words.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  if (current) words.push(current);
+  return words;
+}
+
+/**
+ * Parse the heredoc whose `<<` starts at `start`: where the marker token ends and
+ * where the payload ends. The payload is data on stdin, never shell code.
+ */
+function parseHeredoc(command: string, start: number): { markerEnd: number; bodyEnd: number } {
+  let i = start + 2;
+  if (command[i] === "-") i++;
+  while (command[i] === " ") i++;
+  const markerEnd = i + readToken(command, i).length;
+  const word = command.slice(i, markerEnd).replace(/^['"]|['"]$/g, "");
+  let next = command.indexOf("\n", markerEnd);
+  while (next !== -1) {
+    const lineEnd = command.indexOf("\n", next + 1);
+    const line = command.slice(next + 1, lineEnd === -1 ? command.length : lineEnd).trim();
+    if (line === word) return { markerEnd, bodyEnd: lineEnd === -1 ? command.length : lineEnd };
+    next = lineEnd;
+  }
+  return { markerEnd, bodyEnd: command.length };
+}
+
 function classifySegment(segment: string): SegmentVerdict {
-  const raw = segment.trim().split(/\s+/).filter(Boolean);
-  if (raw.length === 0) return { action: "allow" };
+  const raw = splitWords(segment);
+  if (raw.length === 0 || raw[0].startsWith("#")) return { action: "allow" };
+  // Shell structure keywords carry no command of their own; the body is its own segment.
+  const head = raw[0];
+  const body = segment.trimStart().slice(head.length);
+  if (head === "for" || head === "case") return { action: "allow" };
+  if (SHELL_KEYWORDS.has(head)) return classifySegment(body);
+  if (VAR_BUILTINS.has(head)) return { action: "allow" };
 
   const words = stripPrefixes(raw);
   if (words.length === 0) return { action: "allow" };
@@ -232,6 +325,11 @@ function splitShellSegments(command: string): string[] {
 
   for (let i = 0; i < command.length; i++) {
     const ch = command[i];
+    // backslash-newline continues the line; it is not a segment break
+    if (ch === "\\" && (command[i + 1] === "\n" || (command[i + 1] === "\r" && command[i + 2] === "\n"))) {
+      i += command[i + 1] === "\n" ? 1 : 2;
+      continue;
+    }
     if (quote) {
       current += ch;
       if (ch === quote) quote = null;
@@ -240,6 +338,21 @@ function splitShellSegments(command: string): string[] {
     if (ch === '"' || ch === "'") {
       quote = ch;
       current += ch;
+      continue;
+    }
+    // `$( )` and backticks are opaque here: a `;` or `|` inside them is not a break.
+    if ((ch === "$" && command[i + 1] === "(") || ch === "`") {
+      const end = ch === "`" ? command.indexOf("`", i + 1) : matchParen(command, i + 1);
+      const stop = end === -1 ? command.length - 1 : end;
+      current += command.slice(i, stop + 1);
+      i = stop;
+      continue;
+    }
+    // Heredoc: the payload feeds stdin, it is not more shell code to classify.
+    if (ch === "<" && command[i + 1] === "<" && command[i + 2] !== "<") {
+      const { markerEnd, bodyEnd } = parseHeredoc(command, i);
+      current += command.slice(i, markerEnd);
+      i = bodyEnd - 1;
       continue;
     }
     const two = command.slice(i, i + 2);
@@ -260,36 +373,152 @@ function splitShellSegments(command: string): string[] {
   return segments.filter((s) => s.trim() !== "");
 }
 
-/**
- * Quote-aware scan for shell metacharacters that can hide writes.
- * - Outside quotes: $ ` < > are all dangerous.
- * - Inside single quotes: nothing is interpreted.
- * - Inside double quotes: < > are literal, but $ and ` still allow
- *   command substitution ("$(rm -rf /)" is a real write).
- */
-function containsDangerousShellChars(command: string): boolean {
-  let quote: "'" | '"' | null = null;
-  for (let i = 0; i < command.length; i++) {
+/** Redirect targets that are scratch sinks: writing them leaves nothing to keep. */
+const SCRATCH_SINKS = new Set(["/dev/null", "/dev/stdout", "/dev/stderr"]);
+const SCRATCH_PREFIXES = ["/tmp/", "/private/tmp/", "/var/folders/", "/dev/fd/", "$TMPDIR", "${TMPDIR}"];
+
+/** Read one shell word starting at `start`, stopping at whitespace or an operator. */
+function readToken(command: string, start: number): string {
+  let i = start;
+  while (i < command.length && !/[\s;|&()<>]/.test(command[i])) i++;
+  return command.slice(start, i);
+}
+
+/** Index of the `)` matching the `(` at `open`, quote-aware. */
+function matchParen(command: string, open: number): number {
+  let depth = 0;
+  let quote: '"' | "'" | null = null;
+  for (let i = open; i < command.length; i++) {
     const ch = command[i];
-    if (quote === "'") {
-      if (ch === "'") quote = null;
-      continue;
-    }
-    if (quote === '"') {
-      if (ch === '"') {
-        quote = null;
-      } else if (ch === "$" || ch === "`") {
-        return true;
-      }
+    if (quote) {
+      if (ch === quote) quote = null;
       continue;
     }
     if (ch === "'" || ch === '"') {
       quote = ch;
       continue;
     }
-    if (ch === "$" || ch === "`" || ch === "<" || ch === ">") return true;
+    if (ch === "(") depth++;
+    else if (ch === ")" && --depth === 0) return i;
   }
-  return false;
+  return command.length;
+}
+
+function isScratchSink(target: string): boolean {
+  const path = target.replace(/^['"]|['"]$/g, "");
+  return SCRATCH_SINKS.has(path) || SCRATCH_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+/**
+ * Quote-aware scan for shell constructs that write or execute beyond what the
+ * segments show. Returns the label to show, or null when the command is no more
+ * capable than its segments.
+ *
+ * - single quotes: literal, nothing interpreted
+ * - double quotes: `$` and backticks still expand
+ * - `$NAME` / `${NAME}` / `$?`: plain expansion, no risk
+ * - `$(...)` / `<( )` / backticks: the inner command decides
+ * - `> file` / `>> file`: a durable write unless the target is a scratch sink
+ * - `2>&1` / `< file` / `<<EOF`: descriptor duplication and stdin, not writes
+ */
+function shellRisk(command: string): string | null {
+  let quote: '"' | "'" | null = null;
+  let i = 0;
+  let pendingBodyEnd = -1; // heredoc payload still to skip
+  while (i < command.length) {
+    const ch = command[i];
+
+    if (ch === "\n" && pendingBodyEnd >= 0) {
+      i = pendingBodyEnd;
+      pendingBodyEnd = -1;
+      continue;
+    }
+
+    if (quote === "'") {
+      if (ch === "'") quote = null;
+      i++;
+      continue;
+    }
+    if (quote === '"' && ch === '"') {
+      quote = null;
+      i++;
+      continue;
+    }
+    if (!quote && (ch === "'" || ch === '"')) {
+      quote = ch;
+      i++;
+      continue;
+    }
+
+    if (ch === "`") {
+      const end = command.indexOf("`", i + 1);
+      const verdict = evaluateCommand(command.slice(i + 1, end === -1 ? command.length : end));
+      if (verdict.action === "confirm") return verdict.label;
+      i = end === -1 ? command.length : end + 1;
+      continue;
+    }
+
+    if (ch === "$") {
+      const next = command[i + 1];
+      if (next === "(") {
+        const end = matchParen(command, i + 1);
+        const verdict = evaluateCommand(command.slice(i + 2, end));
+        if (verdict.action === "confirm") return verdict.label;
+        i = end + 1;
+        continue;
+      }
+      if (next === "{") {
+        const close = command.indexOf("}", i + 1);
+        i = close === -1 ? command.length : close + 1;
+        continue;
+      }
+      if (next && /[A-Za-z0-9_@*#?$!-]/.test(next)) {
+        i += 2;
+        while (i < command.length && /[A-Za-z0-9_]/.test(command[i])) i++;
+        continue;
+      }
+      i++;
+      continue;
+    }
+
+    if (!quote && ch === ">") {
+      if (command[i + 1] === "&") {
+        // 2>&1 / >&2 duplicate a descriptor; no file is touched.
+        i += 2;
+        while (i < command.length && /[0-9-]/.test(command[i])) i++;
+        continue;
+      }
+      const appendWidth = command[i + 1] === ">" ? 2 : 1;
+      let targetStart = i + appendWidth;
+      while (command[targetStart] === " ") targetStart++;
+      const target = readToken(command, targetStart);
+      if (!isScratchSink(target)) return "Command (writes a file):";
+      i = targetStart + target.length;
+      continue;
+    }
+
+    if (!quote && ch === "<") {
+      if (command[i + 1] === "<") {
+        // Heredoc: the payload is stdin data, so only the marker line is shell.
+        const { markerEnd, bodyEnd } = parseHeredoc(command, i);
+        pendingBodyEnd = bodyEnd;
+        i = markerEnd;
+        continue;
+      }
+      if (command[i + 1] === "(") {
+        const end = matchParen(command, i + 1);
+        const verdict = evaluateCommand(command.slice(i + 2, end));
+        if (verdict.action === "confirm") return verdict.label;
+        i = end + 1;
+        continue;
+      }
+      i++; // `< file` only feeds stdin
+      continue;
+    }
+
+    i++;
+  }
+  return null;
 }
 
 /**
@@ -298,20 +527,14 @@ function containsDangerousShellChars(command: string): boolean {
  * command; the first such segment decides the dialog kind/title.
  */
 function evaluateCommand(command: string): CommandVerdict {
-  const normalized = command
-    .replace(/(^|\s)2>&1(\s|$)/g, " ")
-    .replace(/(^|\s)2>\/dev\/null(\s|$)/g, " ")
-    .replace(/(^|\s)1?>\/dev\/null(\s|$)/g, " ")
-    .replace(/(^|\s)&>\/dev\/null(\s|$)/g, " ");
-
-  // Redirections and command substitution always require confirmation.
-  // Quote-aware: a quoted `>` in a grep pattern is literal, not a redirect.
-  if (containsDangerousShellChars(normalized)) {
-    return { action: "confirm", kind: "command", title: "Approve command?", label: "Command (redirection/substitution):" };
+  // Shell-level constructs decide first: substitutions and durable redirects.
+  const risk = shellRisk(command);
+  if (risk) {
+    return { action: "confirm", kind: "command", title: "Approve command?", label: risk };
   }
 
   let verdict: CommandVerdict = { action: "allow" };
-  for (const segment of splitShellSegments(normalized)) {
+  for (const segment of splitShellSegments(command)) {
     const v = classifySegment(segment);
     if (v.action === "confirm") {
       verdict = { action: "confirm", kind: v.kind, title: v.title, label: v.label };
