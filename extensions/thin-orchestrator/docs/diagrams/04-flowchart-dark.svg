@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 620" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.12"/>
+    </filter>
+    <filter id="sketch-filter" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="pattern-hachure" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#94a3b8" stroke-width="1.2"/>
+    </pattern>
+    <pattern id="bg-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#334155" opacity="0.65"/>
+    </pattern>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#94a3b8" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#e03131" />
+    </marker>
+    <marker id="arrow-open" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-hollow-triangle" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <polygon points="0,1.5 10.5,6 0,10.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-filled-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#94a3b8" stroke="#94a3b8" stroke-width="1.4"/>
+    </marker>
+    <marker id="arrow-hollow-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.6"/>
+    </marker>
+    <marker id="arrow-circle" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <circle cx="5" cy="5" r="3.5" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #f8fafc; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #94a3b8; }
+      .group-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 13px; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 16px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .mono-text { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 600; fill: #e2e8f0; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#0f172a" rx="14"/>
+  <rect width="100%" height="100%" fill="url(#bg-grid)" rx="14"/>
+
+  <g transform="translate(570, 48)" text-anchor="middle">
+    <text class="title" font-size="28" y="0">Step 3 Gather 确定性探测与持久化决策流 (Dark 主题)</text>
+    <text class="subtitle" font-size="15" y="28">零打扰复用优先级：显式参数 → 探活脚本 → 环境变量 → 持久化存储 → 交互弹窗</text>
+  </g>
+
+  <!-- Groups / Swimlanes -->
+  
+    <g transform="translate(40, 110)">
+      <rect width="1060" height="230" rx="10" fill="rgba(30,41,59,0.45)" fill-opacity="0.55" stroke="#818cf8" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="294" height="26" rx="6" fill="#312e81" stroke="#818cf8" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#eef2ff">Swimlane A · 自动探测层 (0 UI 打扰)</text>
+    </g>
+
+    <g transform="translate(40, 365)">
+      <rect width="1060" height="215" rx="10" fill="rgba(30,41,59,0.45)" fill-opacity="0.55" stroke="#2dd4bf" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="258" height="26" rx="6" fill="#134e4a" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#f0fdfa">Swimlane B · 兜底交互与安全落盘</text>
+    </g>
+
+  <!-- Sequence Lifelines -->
+  
+
+  <!-- Sequence Fragments -->
+  
+  <!-- Nodes & Cards -->
+  
+    <g transform="translate(65, 195)" filter="url(#shadow)" >
+      <rect width="130" height="54" rx="27" fill="#134e4a" stroke="#2dd4bf" stroke-width="2" />
+      
+      <text class="node-title" x="65" y="32" text-anchor="middle" fill="#f0fdfa">开始 Gather</text>
+    </g>
+
+    <g transform="translate(240, 195)" filter="url(#shadow)" >
+      <polygon points="20,0 190,0 170,54 0,54" fill="#164e63" stroke="#22d3ee" stroke-width="2" />
+      <text class="node-title" x="95" y="32" text-anchor="middle" fill="#ecfeff">运行 preDiscoverCmd</text>
+    </g>
+
+    <g transform="translate(480, 170)" filter="url(#shadow)" >
+      <polygon points="82.5,0 165,52 82.5,104 0,52" fill="#422006" stroke="#facc15" stroke-width="2" />
+      <text class="node-title" x="82.5" y="57" text-anchor="middle" fill="#fefce8">envFiles 命中?</text>
+      
+    </g>
+
+    <g transform="translate(705, 170)" filter="url(#shadow)" >
+      <polygon points="85,0 170,52 85,104 0,52" fill="#431407" stroke="#fb923c" stroke-width="2" />
+      <text class="node-title" x="85" y="57" text-anchor="middle" fill="#fff7ed">fieldStore 命中?</text>
+      
+    </g>
+
+    <g transform="translate(935, 172)" filter="url(#shadow)" >
+      <path d="M 0 13 L 0 87 A 70 13 0 0 0 140 87 L 140 13 Z" fill="#3b0764" stroke="#c084fc" stroke-width="2" />
+      <ellipse cx="70" cy="13" rx="70" ry="13" fill="#3b0764" stroke="#c084fc" stroke-width="2"/>
+      <text class="node-title" x="70" y="52" text-anchor="middle" fill="#faf5ff">fields.json</text>
+      <text class="card-sub" x="70" y="72" text-anchor="middle" fill="#e9d5ff">.pi/orchestrator</text>
+    </g>
+
+    <g transform="translate(235, 435)" filter="url(#shadow)" >
+      <polygon points="22,0 178,0 200,32 178,64 22,64 0,32" fill="#3b0764" stroke="#e879f9" stroke-width="2" />
+      <text class="node-title" x="100" y="37" text-anchor="middle" fill="#fae8ff">ctx.ui.select / input</text>
+    </g>
+
+    <g transform="translate(495, 415)" filter="url(#shadow)" >
+      <polygon points="85,0 170,52 85,104 0,52" fill="#450a0a" stroke="#f87171" stroke-width="2" />
+      <text class="node-title" x="85" y="57" text-anchor="middle" fill="#fef2f2">secret === true?</text>
+      
+    </g>
+
+    <g transform="translate(725, 436)" filter="url(#shadow)" >
+      <rect width="205" height="62" rx="10" fill="#450a0a" stroke="#f87171" stroke-width="2" />
+      
+      <text class="node-title" x="102.5" y="28" text-anchor="middle" fill="#fef2f2">内存传递 + 全局打码 ***</text>
+      <text class="card-sub" x="102.5" y="48" text-anchor="middle" fill="#fecaca">严禁写入 fields.json</text>
+    </g>
+
+    <g transform="translate(965, 439)" filter="url(#shadow)" >
+      <rect width="115" height="56" rx="28" fill="#064e3b" stroke="#34d399" stroke-width="2" />
+      
+      <text class="node-title" x="57.5" y="33" text-anchor="middle" fill="#ecfdf5">进入 Step 4</text>
+    </g>
+
+  <!-- Edges & Arrows -->
+  
+    <g>
+      <path d="M 195 222 L 240 222" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 430 222 L 480 222" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 645 222 L 705 222" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="648" y="211" width="54" height="22" rx="5" fill="#1e293b" stroke="#334155"/>
+      <text class="tag-text" x="675" y="226" text-anchor="middle">否</text>
+    </g>
+
+    <g>
+      <path d="M 875 222 L 935 222" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="878" y="211" width="54" height="22" rx="5" fill="#1e293b" stroke="#334155"/>
+      <text class="tag-text" x="905" y="226" text-anchor="middle">读取</text>
+    </g>
+
+    <g>
+      <path d="M 790 274 L 790 354.5 L 335 354.5 L 335 435" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="533" y="343.5" width="59" height="22" rx="5" fill="#1e293b" stroke="#334155"/>
+      <text class="tag-text" x="562.5" y="358.5" text-anchor="middle">未命中</text>
+    </g>
+
+    <g>
+      <path d="M 435 467 L 495 467" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 665 467 L 725 467" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="668" y="456" width="54" height="22" rx="5" fill="#1e293b" stroke="#334155"/>
+      <text class="tag-text" x="695" y="471" text-anchor="middle">是</text>
+    </g>
+
+    <g>
+      <path d="M 580 415 L 580 343.5 L 1005 343.5 L 1005 272" fill="none" stroke="#94a3b8" stroke-width="2.1" stroke-dasharray="6,5"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="755" y="332.5" width="75" height="22" rx="5" fill="#1e293b" stroke="#334155"/>
+      <text class="tag-text" x="792.5" y="347.5" text-anchor="middle">否(写盘)</text>
+    </g>
+
+    <g>
+      <path d="M 930 467 L 965 467" fill="none" stroke="#94a3b8" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+  <!-- Sequence Messages -->
+  
+
+  <!-- Config Banners -->
+  
+</svg>

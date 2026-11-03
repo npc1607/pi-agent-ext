@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 680" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.12"/>
+    </filter>
+    <filter id="sketch-filter" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="pattern-hachure" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#27272a" stroke-width="1.2"/>
+    </pattern>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#27272a" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#e03131" />
+    </marker>
+    <marker id="arrow-open" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#27272a" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-hollow-triangle" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <polygon points="0,1.5 10.5,6 0,10.5" fill="#ffffff" stroke="#27272a" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-filled-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#27272a" stroke="#27272a" stroke-width="1.4"/>
+    </marker>
+    <marker id="arrow-hollow-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#ffffff" stroke="#27272a" stroke-width="1.6"/>
+    </marker>
+    <marker id="arrow-circle" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <circle cx="5" cy="5" r="3.5" fill="#27272a"/>
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #09090b; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #52525b; }
+      .group-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 13px; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 16px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .mono-text { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 600; fill: #18181b; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="14"/>
+  
+
+  <g transform="translate(560, 48)" text-anchor="middle">
+    <text class="title" font-size="28" y="0">Thin Orchestrator 核心类型模型 (UML Class Diagram)</text>
+    <text class="subtitle" font-size="15" y="28">types.ts · 组合 / 聚合 / 依赖与多重性</text>
+  </g>
+
+  <!-- Groups / Swimlanes -->
+  
+
+  <!-- Sequence Lifelines -->
+  
+
+  <!-- Sequence Fragments -->
+  
+  <!-- Nodes & Cards -->
+  
+    <g transform="translate(60, 120)" >
+      <rect width="290" height="236" rx="3" fill="#ffffff" stroke="#18181b" stroke-width="2"/>
+      <text class="mono-text" x="145" y="20" text-anchor="middle" fill="#52525b">&lt;&lt;interface&gt;&gt;</text>
+      <text class="node-title" x="145" y="42" text-anchor="middle" fill="#09090b">WorkflowTemplate</text>
+      <line x1="0" y1="54" x2="290" y2="54" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="74" fill="#18181b">+ name: string</text>
+      <text class="mono-text" x="14" y="96" fill="#18181b">+ requiredFields: string[]</text>
+      <text class="mono-text" x="14" y="118" fill="#18181b">+ preDiscoverCmd?: string</text>
+      <text class="mono-text" x="14" y="140" fill="#18181b">+ envFiles?: string[]</text>
+      <text class="mono-text" x="14" y="162" fill="#18181b">+ fieldStore?: string</text>
+      <line x1="0" y1="178" x2="290" y2="178" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="198" fill="#18181b">+ steps: WorkflowStep[]</text>
+      <text class="mono-text" x="14" y="220" fill="#18181b">+ fieldPrompts?: Record&lt;string, FieldPrompt&gt;</text>
+    </g>
+
+    <g transform="translate(440, 120)" >
+      <rect width="280" height="220" rx="3" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      
+      <text class="node-title" x="140" y="25" text-anchor="middle" fill="#1864ab">WorkflowStep</text>
+      <line x1="0" y1="38" x2="280" y2="38" stroke="#1971c2" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="58" fill="#18181b">+ id: string</text>
+      <text class="mono-text" x="14" y="80" fill="#18181b">+ agent: string</text>
+      <text class="mono-text" x="14" y="102" fill="#18181b">+ taskTemplate: string</text>
+      <text class="mono-text" x="14" y="124" fill="#18181b">+ gateCmd?: string</text>
+      <text class="mono-text" x="14" y="146" fill="#18181b">+ maxRetries?: number</text>
+      <line x1="0" y1="162" x2="280" y2="162" stroke="#1971c2" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="182" fill="#18181b">+ onGateFail?: RepairPolicy</text>
+      <text class="mono-text" x="14" y="204" fill="#18181b">+ guardedAction?: GuardedAction</text>
+    </g>
+
+    <g transform="translate(810, 120)" >
+      <rect width="260" height="198" rx="3" fill="#ffffff" stroke="#18181b" stroke-width="2"/>
+      
+      <text class="node-title" x="130" y="25" text-anchor="middle" fill="#09090b">SpecialistAgent</text>
+      <line x1="0" y1="38" x2="260" y2="38" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="58" fill="#18181b">+ name: string</text>
+      <text class="mono-text" x="14" y="80" fill="#18181b">+ tools?: string[]</text>
+      <text class="mono-text" x="14" y="102" fill="#18181b">+ knowledgeFiles: string[]</text>
+      <text class="mono-text" x="14" y="124" fill="#18181b">+ skills: string[]</text>
+      <text class="mono-text" x="14" y="146" fill="#18181b">+ postGateCmd?: string</text>
+      <line x1="0" y1="162" x2="260" y2="162" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="182" fill="#18181b">+ systemPrompt: string</text>
+    </g>
+
+    <g transform="translate(60, 430)" >
+      <rect width="290" height="198" rx="3" fill="#ffffff" stroke="#18181b" stroke-width="2"/>
+      
+      <text class="node-title" x="145" y="25" text-anchor="middle" fill="#09090b">FieldPrompt</text>
+      <line x1="0" y1="38" x2="290" y2="38" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="58" fill="#18181b">+ title?: string</text>
+      <text class="mono-text" x="14" y="80" fill="#18181b">+ options?: string[]</text>
+      <text class="mono-text" x="14" y="102" fill="#18181b">+ default?: string</text>
+      <text class="mono-text" x="14" y="124" fill="#18181b">+ secret?: boolean</text>
+      <text class="mono-text" x="14" y="146" fill="#18181b">+ envVar?: string</text>
+      <line x1="0" y1="162" x2="290" y2="162" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="182" fill="#18181b">+ discoverCmd?: string</text>
+    </g>
+
+    <g transform="translate(440, 430)" >
+      <rect width="280" height="192" rx="3" fill="#ffffff" stroke="#18181b" stroke-width="2"/>
+      <text class="mono-text" x="140" y="20" text-anchor="middle" fill="#52525b">&lt;&lt;HarnessMM&gt;&gt;</text>
+      <text class="node-title" x="140" y="42" text-anchor="middle" fill="#09090b">GuardedAction</text>
+      <line x1="0" y1="54" x2="280" y2="54" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="74" fill="#18181b">+ actionCmd: string</text>
+      <text class="mono-text" x="14" y="96" fill="#18181b">+ timeoutMs?: number</text>
+      <text class="mono-text" x="14" y="118" fill="#18181b">+ predecessorGatePassed?: boolean</text>
+      <text class="mono-text" x="14" y="140" fill="#18181b">+ outputMatches?: string</text>
+      <line x1="0" y1="156" x2="280" y2="156" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="176" fill="#18181b">+ readinessCheckCmd?: string</text>
+    </g>
+
+    <g transform="translate(810, 430)" >
+      <rect width="260" height="192" rx="3" fill="#ffffff" stroke="#18181b" stroke-width="2"/>
+      <text class="mono-text" x="130" y="20" text-anchor="middle" fill="#52525b">&lt;&lt;receipt&gt;&gt;</text>
+      <text class="node-title" x="130" y="42" text-anchor="middle" fill="#09090b">SubstitutionCertificate</text>
+      <line x1="0" y1="54" x2="260" y2="54" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="74" fill="#18181b">+ stepId: string</text>
+      <text class="mono-text" x="14" y="96" fill="#18181b">+ omittedAgent: string</text>
+      <text class="mono-text" x="14" y="118" fill="#18181b">+ executedCmd: string</text>
+      <text class="mono-text" x="14" y="140" fill="#18181b">+ exitCode: number</text>
+      <line x1="0" y1="156" x2="260" y2="156" stroke="#18181b" stroke-width="1.5"/>
+      <text class="mono-text" x="14" y="176" fill="#18181b">+ timestamp: string</text>
+    </g>
+
+  <!-- Edges & Arrows -->
+  
+    <g>
+      <path d="M 350 238 L 440 230" fill="none" stroke="#27272a" stroke-width="2.1"  marker-start="url(#arrow-filled-diamond)" />
+      
+      <rect x="354" y="223" width="82" height="22" rx="5" fill="#f4f4f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="395" y="238" text-anchor="middle">contains</text><text class="mono-text" x="364" y="258" text-anchor="start" fill="#52525b">1</text><text class="mono-text" x="426" y="250" text-anchor="end" fill="#52525b">1..*</text>
+    </g>
+
+    <g>
+      <path d="M 205 356 L 205 430" fill="none" stroke="#27272a" stroke-width="2.1"  marker-start="url(#arrow-hollow-diamond)" />
+      <text class="mono-text" x="217" y="378" text-anchor="start" fill="#52525b">1</text><text class="mono-text" x="217" y="418" text-anchor="start" fill="#52525b">0..*</text>
+    </g>
+
+    <g>
+      <path d="M 720 230 L 810 219" fill="none" stroke="#27272a" stroke-width="2.1" stroke-dasharray="6,5"  marker-end="url(#arrow-open)"/>
+      
+      <rect x="720" y="213.5" width="90" height="22" rx="5" fill="#f4f4f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="765" y="228.5" text-anchor="middle">delegates</text>
+    </g>
+
+    <g>
+      <path d="M 580 340 L 580 430" fill="none" stroke="#27272a" stroke-width="2.1"  marker-start="url(#arrow-filled-diamond)" />
+      <text class="mono-text" x="592" y="362" text-anchor="start" fill="#52525b">1</text><text class="mono-text" x="592" y="418" text-anchor="start" fill="#52525b">0..1</text>
+    </g>
+
+    <g>
+      <path d="M 720 526 L 810 526" fill="none" stroke="#27272a" stroke-width="2.1" stroke-dasharray="6,5"  marker-end="url(#arrow-hollow-triangle)"/>
+      
+      <rect x="713" y="515" width="104" height="22" rx="5" fill="#f4f4f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="765" y="530" text-anchor="middle">issues κ_t</text>
+    </g>
+
+  <!-- Sequence Messages -->
+  
+
+  <!-- Config Banners -->
+  
+</svg>

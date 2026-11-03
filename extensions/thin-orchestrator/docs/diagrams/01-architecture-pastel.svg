@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 820" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.12"/>
+    </filter>
+    <filter id="sketch-filter" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="pattern-hachure" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#495057" stroke-width="1.2"/>
+    </pattern>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#495057" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#e03131" />
+    </marker>
+    <marker id="arrow-open" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#495057" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-hollow-triangle" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <polygon points="0,1.5 10.5,6 0,10.5" fill="#ffffff" stroke="#495057" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-filled-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#495057" stroke="#495057" stroke-width="1.4"/>
+    </marker>
+    <marker id="arrow-hollow-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#ffffff" stroke="#495057" stroke-width="1.6"/>
+    </marker>
+    <marker id="arrow-circle" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <circle cx="5" cy="5" r="3.5" fill="#495057"/>
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
+      .group-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 13px; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 16px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .mono-text { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 600; fill: #495057; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="14"/>
+  
+
+  <g transform="translate(590, 48)" text-anchor="middle">
+    <text class="title" font-size="28" y="0">Thin Orchestrator 体系架构图 (Pastel 主题)</text>
+    <text class="subtitle" font-size="15" y="28">确定性路由层 × 隔离专家子进程 × 按需知识挂载</text>
+  </g>
+
+  <!-- Groups / Swimlanes -->
+  
+    <g transform="translate(40, 115)">
+      <rect width="1100" height="210" rx="12" fill="#e7f5ff" fill-opacity="0.55" stroke="#1971c2" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="483" height="26" rx="6" fill="#e7f5ff" stroke="#1971c2" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#1864ab">Layer 1 · Deterministic Router (0 Domain Reasoning)</text>
+    </g>
+
+    <g transform="translate(40, 365)">
+      <rect width="1100" height="250" rx="12" fill="#f3f0ff" fill-opacity="0.55" stroke="#7048e8" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="573" height="26" rx="6" fill="#f3f0ff" stroke="#7048e8" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#5f3dc4">Layer 2 · Isolated Specialist Subagents (pi --no-session -ns)</text>
+    </g>
+
+  <!-- Sequence Fragments -->
+  
+
+  <!-- Sequence Lifelines -->
+  
+
+  <!-- Nodes & Cards -->
+  
+    <g transform="translate(70, 145)" filter="url(#shadow)" >
+      <rect width="310" height="160" rx="12" fill="#ebfbee" stroke="#0ca678" stroke-width="2" />
+      
+      <text class="card-title" x="155" y="36" text-anchor="middle" fill="#087f5b">入口与参数收集</text>
+      <text class="card-sub" x="155" y="56" text-anchor="middle" fill="#495057">index.ts · Step 1-3</text>
+      <line x1="25" y1="72" x2="285" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 解析 Workflow / Agent 定义</text>
+        <text y="28" fill="#2b2b2b">• preChecks 预检与 Gather 弹窗</text>
+      </g>
+    </g>
+
+    <g transform="translate(435, 145)" filter="url(#shadow)" >
+      <rect width="310" height="160" rx="12" fill="#e7f5ff" stroke="#1971c2" stroke-width="2" />
+      
+      <text class="card-title" x="155" y="36" text-anchor="middle" fill="#1864ab">工作区感知与门禁</text>
+      <text class="card-sub" x="155" y="56" text-anchor="middle" fill="#495057">discovery.ts · Step 4-5</text>
+      <line x1="25" y1="72" x2="285" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 探测 Git / go.mod / 脏文件</text>
+        <text y="28" fill="#2b2b2b">• GDR 守卫判定与 CCS 原生替换</text>
+      </g>
+    </g>
+
+    <g transform="translate(800, 145)" filter="url(#shadow)" >
+      <rect width="310" height="160" rx="12" fill="#fff4e6" stroke="#e8590c" stroke-width="2" />
+      
+      <text class="card-title" x="155" y="36" text-anchor="middle" fill="#d9480f">后置校验与修复闭环</text>
+      <text class="card-sub" x="155" y="56" text-anchor="middle" fill="#495057">runner.ts · Step 7</text>
+      <line x1="25" y1="72" x2="285" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 执行 gateCmd 确定性校验</text>
+        <text y="28" fill="#2b2b2b">• onGateFail 自动回跳修复</text>
+      </g>
+    </g>
+
+    <g transform="translate(70, 400)" filter="url(#shadow)" >
+      <rect width="240" height="185" rx="12" fill="#e6fcf5" stroke="#099268" stroke-width="2" />
+      
+      <text class="card-title" x="120" y="36" text-anchor="middle" fill="#087f5b">Scout / Inputs</text>
+      <text class="card-sub" x="120" y="56" text-anchor="middle" fill="#495057">agents/scout.md</text>
+      <line x1="25" y1="72" x2="215" y2="72" stroke="#96f2d7" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 只读代码边界侦察</text>
+        <text y="28" fill="#2b2b2b">• 接口前置依赖探活</text>
+      </g>
+    </g>
+
+    <g transform="translate(340, 400)" filter="url(#shadow)" >
+      <rect width="240" height="185" rx="12" fill="#edf2ff" stroke="#4263eb" stroke-width="2" />
+      
+      <text class="card-title" x="120" y="36" text-anchor="middle" fill="#364fc7">Designer / Planner</text>
+      <text class="card-sub" x="120" y="56" text-anchor="middle" fill="#495057">agents/planner.md</text>
+      <line x1="25" y1="72" x2="215" y2="72" stroke="#bac8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 等价类/状态机测试点</text>
+        <text y="28" fill="#2b2b2b">• 分步执行蓝图</text>
+      </g>
+    </g>
+
+    <g transform="translate(610, 400)" filter="url(#shadow)" >
+      <rect width="240" height="185" rx="12" fill="#f3f0ff" stroke="#7048e8" stroke-width="2" />
+      
+      <text class="card-title" x="120" y="36" text-anchor="middle" fill="#5f3dc4">Implementer / Author</text>
+      <text class="card-sub" x="120" y="56" text-anchor="middle" fill="#495057">agents/implementer.md</text>
+      <line x1="25" y1="72" x2="215" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 受限代码/套件实现</text>
+        <text y="28" fill="#2b2b2b">• git diff --check 门禁</text>
+      </g>
+    </g>
+
+    <g transform="translate(880, 400)" filter="url(#shadow)" >
+      <rect width="230" height="185" rx="12" fill="#fff9db" stroke="#f08c00" stroke-width="2" />
+      
+      <text class="card-title" x="115" y="36" text-anchor="middle" fill="#e67700">Verifier / Reviewer</text>
+      <text class="card-sub" x="115" y="56" text-anchor="middle" fill="#495057">agents/verifier.md</text>
+      <line x1="25" y1="72" x2="205" y2="72" stroke="#ffec99" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0" fill="#2b2b2b">• 真实测试与覆盖率校验</text>
+        <text y="28" fill="#2b2b2b">• 回归与安全审查</text>
+      </g>
+    </g>
+
+  <!-- Edges & Arrows -->
+  
+    <g>
+      <path d="M 380 225 L 435 225" fill="none" stroke="#495057" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="371.5" y="214" width="72" height="22" rx="5" fill="#f1f3f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="407.5" y="229" text-anchor="middle">fields</text>
+    </g>
+
+    <g>
+      <path d="M 745 225 L 800 225" fill="none" stroke="#495057" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+      <rect x="727.5" y="214" width="90" height="22" rx="5" fill="#f1f3f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="772.5" y="229" text-anchor="middle">receipts</text>
+    </g>
+
+    <g>
+      <path d="M 590 305 L 460 400" fill="none" stroke="#495057" stroke-width="2.1" stroke-dasharray="6,5"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="475.5" y="341.5" width="99" height="22" rx="5" fill="#f1f3f5" stroke="#dee2e6"/>
+      <text class="tag-text" x="525" y="356.5" text-anchor="middle">Step 6 派发</text>
+    </g>
+
+    <g>
+      <path d="M 310 492.5 L 340 492.5" fill="none" stroke="#495057" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 580 492.5 L 610 492.5" fill="none" stroke="#495057" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 850 492.5 L 880 492.5" fill="none" stroke="#495057" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+  <!-- Sequence Messages -->
+  
+
+  <!-- Config Banners -->
+  
+    <g transform="translate(40, 650)" filter="url(#red-shadow)">
+      <rect width="1100" height="135" rx="12" fill="#fff5f5" stroke="#e03131" stroke-width="2.5"/>
+      <text class="card-title" x="550" y="36" text-anchor="middle" fill="#c92a2a" font-size="22">Runtime Knowledge &amp; Artifacts (.pi/)</text>
+      <text class="card-sub" x="550" y="58" text-anchor="middle" font-size="14" fill="#495057">Step 6 按需注入子进程，主会话 0 上下文污染</text>
+      <line x1="30" y1="74" x2="1070" y2="74" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(35, 104)" font-size="15">
+        <text y="0" fill="#2b2b2b">• <tspan font-weight="700">knowledge/*.md</tspan>：api-test-strategy / test-case-design / code-search 按角色挂载</text>
+        <text y="28" fill="#2b2b2b">• <tspan font-weight="700">.pi/orchestrator/fields.json &amp; .pi/secrets/</tspan>：非密字段持久化复用，凭据自动打码 ***</text>
+      </g>
+    </g>
+</svg>

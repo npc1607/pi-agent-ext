@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 720" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.12"/>
+    </filter>
+    <filter id="sketch-filter" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="pattern-hachure" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#334155" stroke-width="1.2"/>
+    </pattern>
+    <pattern id="bg-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#cbd5e1" opacity="0.65"/>
+    </pattern>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#334155" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#e03131" />
+    </marker>
+    <marker id="arrow-open" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#334155" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-hollow-triangle" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <polygon points="0,1.5 10.5,6 0,10.5" fill="#f8fafc" stroke="#334155" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-filled-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#334155" stroke="#334155" stroke-width="1.4"/>
+    </marker>
+    <marker id="arrow-hollow-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#f8fafc" stroke="#334155" stroke-width="1.6"/>
+    </marker>
+    <marker id="arrow-circle" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <circle cx="5" cy="5" r="3.5" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #0f172a; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #475569; }
+      .group-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 13px; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 16px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .mono-text { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 600; fill: #0f172a; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#f8fafc" rx="14"/>
+  <rect width="100%" height="100%" fill="url(#bg-grid)" rx="14"/>
+
+  <g transform="translate(580, 48)" text-anchor="middle">
+    <text class="title" font-size="28" y="0">7-Step 协议与 HarnessMM CCS 执行时序图 (Blueprint 主题)</text>
+    <text class="subtitle" font-size="15" y="28">Step 1-7 全链路调用、守卫判定与回退机制</text>
+  </g>
+
+  <!-- Groups / Swimlanes -->
+  
+
+  <!-- Sequence Lifelines -->
+  
+    <g>
+      <line x1="110" y1="171" x2="110" y2="665" stroke="#1971c2" stroke-width="1.6" stroke-dasharray="6,5"/>
+      
+      <circle cx="110" cy="119" r="9" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <line x1="110" y1="128" x2="110" y2="142" stroke="#1971c2" stroke-width="2"/>
+      <line x1="98" y1="134" x2="122" y2="134" stroke="#1971c2" stroke-width="2"/>
+      <line x1="110" y1="142" x2="101" y2="153" stroke="#1971c2" stroke-width="2"/>
+      <line x1="110" y1="142" x2="119" y2="153" stroke="#1971c2" stroke-width="2"/>
+      <text class="node-title" x="110" y="167" text-anchor="middle" fill="#1864ab" font-size="13.5">User / Main Agent</text>
+      
+      <rect x="104" y="185" width="12" height="445" rx="2" fill="#e7f5ff" stroke="#1971c2" stroke-width="1.6"/>
+    </g>
+
+    <g>
+      <line x1="350" y1="159" x2="350" y2="665" stroke="#1971c2" stroke-width="1.6" stroke-dasharray="6,5"/>
+      
+      <rect x="270" y="115" width="160" height="44" rx="6" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="node-title" x="350" y="142" text-anchor="middle" fill="#1864ab">Runner (7-Step)</text>
+      
+      <rect x="344" y="195" width="12" height="425" rx="2" fill="#e7f5ff" stroke="#1971c2" stroke-width="1.6"/>
+    </g>
+
+    <g>
+      <line x1="610" y1="159" x2="610" y2="665" stroke="#099268" stroke-width="1.6" stroke-dasharray="6,5"/>
+      
+      <rect x="521" y="115" width="178" height="44" rx="6" fill="#e6fcf5" stroke="#099268" stroke-width="2"/>
+      <text class="node-title" x="610" y="142" text-anchor="middle" fill="#087f5b">Host Shell / Gate</text>
+      
+      <rect x="604" y="225" width="12" height="45" rx="2" fill="#e6fcf5" stroke="#099268" stroke-width="1.6"/>
+      <rect x="604" y="360" width="12" height="50" rx="2" fill="#e6fcf5" stroke="#099268" stroke-width="1.6"/>
+      <rect x="604" y="555" width="12" height="45" rx="2" fill="#e6fcf5" stroke="#099268" stroke-width="1.6"/>
+    </g>
+
+    <g>
+      <line x1="855" y1="159" x2="855" y2="665" stroke="#7048e8" stroke-width="1.6" stroke-dasharray="6,5"/>
+      
+      <rect x="748.5" y="115" width="213" height="44" rx="6" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="node-title" x="855" y="142" text-anchor="middle" fill="#5f3dc4">Specialist Subprocess</text>
+      
+      <rect x="849" y="485" width="12" height="50" rx="2" fill="#f3f0ff" stroke="#7048e8" stroke-width="1.6"/>
+    </g>
+
+    <g>
+      <line x1="1055" y1="159" x2="1055" y2="665" stroke="#475569" stroke-width="1.6" stroke-dasharray="6,5"/>
+      
+      <rect x="970.5" y="115" width="169" height="44" rx="6" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+      <text class="node-title" x="1055" y="142" text-anchor="middle" fill="#0f172a">Knowledge Loader</text>
+      
+      <rect x="1049" y="455" width="12" height="25" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.6"/>
+    </g>
+
+  <!-- Sequence Fragments -->
+  
+    <g transform="translate(280, 325)">
+      <rect width="830" height="220" rx="4" fill="none" stroke="#475569" stroke-width="1.6"/>
+      <polygon points="0,0 47,0 47,16 37,26 0,26" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+      <text class="mono-text" x="10" y="17" font-weight="700" fill="#0f172a">ALT</text>
+      <rect x="55" y="4" width="239" height="19" rx="3" fill="#f8fafc" fill-opacity="0.9"/>
+      <text class="mono-text" x="59" y="18" fill="#64748b">[GDR Guard Passed (CCS 命中)]</text>
+      
+      <line x1="0" y1="90" x2="830" y2="90" stroke="#475569" stroke-width="1.5" stroke-dasharray="5,5"/>
+      <rect x="10" y="95" width="351" height="19" rx="3" fill="#f8fafc" fill-opacity="0.9"/>
+      <text class="mono-text" x="14" y="109" fill="#64748b">[Guard 未满足或命令非 0 → 回退唤醒 LLM 子进程]</text>
+    </g>
+  <!-- Nodes & Cards -->
+  
+
+  <!-- Edges & Arrows -->
+  
+
+  <!-- Sequence Messages -->
+  
+    <g>
+      <line x1="116" y1="200" x2="344" y2="200" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="230" y="193" text-anchor="middle" fill="#1e293b">1. invoke({ workflow, task })</text>
+    </g>
+
+    <g>
+      <line x1="356" y1="235" x2="604" y2="235" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="480" y="228" text-anchor="middle" fill="#1e293b">2. preChecks &amp; preDiscoverCmd</text>
+    </g>
+
+    <g>
+      <line x1="604" y1="265" x2="356" y2="265" stroke="#334155" stroke-width="1.9" stroke-dasharray="5,5" marker-end="url(#arrow-open)"/>
+      <text class="mono-text" x="480" y="258" text-anchor="middle" fill="#1e293b">discovered fields JSON</text>
+    </g>
+
+    <g>
+      <path d="M 356 288 L 398 288 L 398 314 L 356 314" fill="none" stroke="#334155" stroke-width="1.8"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="406" y="305" fill="#1e293b">3-5. Gather + Auto-discover + Trust Gate</text>
+    </g>
+
+    <g>
+      <line x1="356" y1="370" x2="604" y2="370" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="480" y="363" text-anchor="middle" fill="#1e293b">6a. exec guardedAction.actionCmd (0 token)</text>
+    </g>
+
+    <g>
+      <line x1="604" y1="402" x2="356" y2="402" stroke="#334155" stroke-width="1.9" stroke-dasharray="5,5" marker-end="url(#arrow-open)"/>
+      <text class="mono-text" x="480" y="395" text-anchor="middle" fill="#1e293b">exit 0 -&gt; Issue SubstitutionCertificate κ_t</text>
+    </g>
+
+    <g>
+      <line x1="356" y1="468" x2="1049" y2="468" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="702.5" y="461" text-anchor="middle" fill="#1e293b">6b. loadRuntimeKnowledgeFiles()</text>
+    </g>
+
+    <g>
+      <line x1="356" y1="498" x2="849" y2="498" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="602.5" y="491" text-anchor="middle" fill="#1e293b">spawn pi --mode json --no-session</text>
+    </g>
+
+    <g>
+      <line x1="849" y1="528" x2="356" y2="528" stroke="#334155" stroke-width="1.9" stroke-dasharray="5,5" marker-end="url(#arrow-open)"/>
+      <text class="mono-text" x="602.5" y="521" text-anchor="middle" fill="#1e293b">stage output + telemetry</text>
+    </g>
+
+    <g>
+      <line x1="356" y1="565" x2="604" y2="565" stroke="#334155" stroke-width="1.9"  marker-end="url(#arrow-gray)"/>
+      <text class="mono-text" x="480" y="558" text-anchor="middle" fill="#1e293b">7. run gateCmd (coverage-check.ts)</text>
+    </g>
+
+    <g>
+      <line x1="604" y1="592" x2="356" y2="592" stroke="#334155" stroke-width="1.9" stroke-dasharray="5,5" marker-end="url(#arrow-open)"/>
+      <text class="mono-text" x="480" y="585" text-anchor="middle" fill="#1e293b">GATE_STATUS: PASS</text>
+    </g>
+
+    <g>
+      <line x1="344" y1="620" x2="116" y2="620" stroke="#334155" stroke-width="1.9" stroke-dasharray="5,5" marker-end="url(#arrow-open)"/>
+      <text class="mono-text" x="230" y="613" text-anchor="middle" fill="#1e293b">Audit Trail + Redacted Summary</text>
+    </g>
+
+  <!-- Config Banners -->
+  
+</svg>

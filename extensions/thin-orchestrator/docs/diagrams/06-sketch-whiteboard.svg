@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 560" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.12"/>
+    </filter>
+    <filter id="sketch-filter" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="pattern-hachure" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#44403c" stroke-width="1.2"/>
+    </pattern>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#44403c" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 Z" fill="#e03131" />
+    </marker>
+    <marker id="arrow-open" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5" fill="none" stroke="#44403c" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-hollow-triangle" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <polygon points="0,1.5 10.5,6 0,10.5" fill="#fffdf8" stroke="#44403c" stroke-width="1.8"/>
+    </marker>
+    <marker id="arrow-filled-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#44403c" stroke="#44403c" stroke-width="1.4"/>
+    </marker>
+    <marker id="arrow-hollow-diamond" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+      <polygon points="0,6 6,1.5 12,6 6,10.5" fill="#fffdf8" stroke="#44403c" stroke-width="1.6"/>
+    </marker>
+    <marker id="arrow-circle" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <circle cx="5" cy="5" r="3.5" fill="#44403c"/>
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1c1917; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #57534e; }
+      .group-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 13px; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 16px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .mono-text { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 600; fill: #292524; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 12.5px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#fffdf8" rx="14"/>
+  
+
+  <g transform="translate(540, 48)" text-anchor="middle">
+    <text class="title" font-size="28" y="0">为什么要用 Thin Orchestrator？(Sketch 手绘白板风)</text>
+    <text class="subtitle" font-size="15" y="28">对比巨石 Agent 上下文污染 vs 隔离专家子进程</text>
+  </g>
+
+  <!-- Groups / Swimlanes -->
+  
+    <g transform="translate(45, 115)">
+      <rect width="460" height="390" rx="8" fill="#fff5f5" fill-opacity="0.55" stroke="#e03131" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="249" height="26" rx="6" fill="#fff5f5" stroke="#e03131" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#c92a2a">传统巨石 Agent (Context 膨胀干扰)</text>
+    </g>
+
+    <g transform="translate(555, 115)">
+      <rect width="480" height="390" rx="8" fill="#ebfbee" fill-opacity="0.55" stroke="#0ca678" stroke-width="1.8" stroke-dasharray="6,5"/>
+      
+      <rect x="14" y="-13" width="258" height="26" rx="6" fill="#ebfbee" stroke="#0ca678" stroke-width="1.5"/>
+      <text class="group-title" x="26" y="4" fill="#087f5b">Thin Orchestrator (按需隔离挂载)</text>
+    </g>
+
+  <!-- Sequence Fragments -->
+  
+
+  <!-- Sequence Lifelines -->
+  
+
+  <!-- Nodes & Cards -->
+  
+    <g transform="translate(80, 255)">
+      <circle cx="35" cy="16" r="12" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
+      <line x1="35" y1="28" x2="35" y2="54" stroke="#343a40" stroke-width="2"/>
+      <line x1="17" y1="38" x2="53" y2="38" stroke="#343a40" stroke-width="2"/>
+      <line x1="35" y1="54" x2="21" y2="74" stroke="#343a40" stroke-width="2"/>
+      <line x1="35" y1="54" x2="49" y2="74" stroke="#343a40" stroke-width="2"/>
+      <text class="node-title" x="35" y="92" text-anchor="middle" fill="#212529">Developer</text>
+    </g>
+
+    <g transform="translate(205, 175)"  filter="url(#sketch-filter)">
+      <rect width="260" height="90" rx="8" fill="#fff5f5" stroke="#e03131" stroke-width="2" />
+      <rect width="260" height="90" rx="8" fill="url(#pattern-hachure)" opacity="0.22" pointer-events="none"/>
+      <text class="node-title" x="130" y="42" text-anchor="middle" fill="#c92a2a">All-in-One Prompt</text>
+      <text class="card-sub" x="130" y="62" text-anchor="middle" fill="#495057">塞满所有规则+历史输出</text>
+    </g>
+
+    <g transform="translate(205, 310)" >
+      <path d="M 0 0 L 244 0 L 260 16 L 260 150 L 0 150 Z" fill="#fff9db" stroke="#f08c00" stroke-width="1.8"/>
+      <path d="M 244 0 L 244 16 L 260 16" fill="none" stroke="#f08c00" stroke-width="1.6"/>
+      <text class="card-item" x="14" y="28" fill="#292524">Token 随步骤线性爆炸</text>
+      <text class="card-item" x="14" y="50" fill="#292524">侦察 raw dump 挤占写代码注意力</text>
+      <text class="card-item" x="14" y="72" fill="#292524">门禁靠 LLM 自觉，容易静默跳步</text>
+    </g>
+
+    <g transform="translate(590, 185)"  filter="url(#sketch-filter)">
+      <polygon points="22,0 173,0 195,35 173,70 22,70 0,35" fill="#e7f5ff" stroke="#1971c2" stroke-width="2" />
+      <text class="node-title" x="97.5" y="40" text-anchor="middle" fill="#1864ab">TS Router (0 Token)</text>
+    </g>
+
+    <g transform="translate(830, 155)"  filter="url(#sketch-filter)">
+      <rect width="175" height="68" rx="8" fill="#e6fcf5" stroke="#099268" stroke-width="2" />
+      <rect width="175" height="68" rx="8" fill="url(#pattern-hachure)" opacity="0.22" pointer-events="none"/>
+      <text class="node-title" x="87.5" y="31" text-anchor="middle" fill="#087f5b">Subagent: Scout</text>
+      <text class="card-sub" x="87.5" y="51" text-anchor="middle" fill="#495057">+ code-search.md</text>
+    </g>
+
+    <g transform="translate(830, 255)"  filter="url(#sketch-filter)">
+      <rect width="175" height="68" rx="8" fill="#f3f0ff" stroke="#7048e8" stroke-width="2" />
+      <rect width="175" height="68" rx="8" fill="url(#pattern-hachure)" opacity="0.22" pointer-events="none"/>
+      <text class="node-title" x="87.5" y="31" text-anchor="middle" fill="#5f3dc4">Subagent: Author</text>
+      <text class="card-sub" x="87.5" y="51" text-anchor="middle" fill="#495057">+ api-test-strategy.md</text>
+    </g>
+
+    <g transform="translate(590, 355)" >
+      <path d="M 0 0 L 399 0 L 415 16 L 415 120 L 0 120 Z" fill="#ebfbee" stroke="#0ca678" stroke-width="1.8"/>
+      <path d="M 399 0 L 399 16 L 415 16" fill="none" stroke="#0ca678" stroke-width="1.6"/>
+      <text class="card-item" x="14" y="28" fill="#292524">每个子进程独立干净窗口，用完即焚</text>
+      <text class="card-item" x="14" y="50" fill="#292524">gateCmd 退出码硬门禁 + GDR 原生替换省 100% 重复推理</text>
+    </g>
+
+  <!-- Edges & Arrows -->
+  
+    <g>
+      <path d="M 150 300 L 205 220" fill="none" stroke="#e03131" stroke-width="2.1"   marker-end="url(#arrow-red)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 785 220 L 830 189" fill="none" stroke="#44403c" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 785 220 L 830 289" fill="none" stroke="#44403c" stroke-width="2.1"   marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+  <!-- Sequence Messages -->
+  
+
+  <!-- Config Banners -->
+  
+</svg>
