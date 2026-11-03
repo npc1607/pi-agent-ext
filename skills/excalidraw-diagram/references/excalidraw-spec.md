@@ -1,65 +1,71 @@
-# Excalidraw JSON 数据规范与排版最佳实践
+# Excalidraw 生成器字段参考 (`diagram_generator.js`)
 
-## 1. Excalidraw 核心数据模型
+## 1. 顶层 `spec` 字段
 
-Excalidraw 文件（`.excalidraw`）本质是一个 JSON 对象，包含画布状态、图元列表及关联文件。
-
-```json
+```javascript
 {
-  "type": "excalidraw",
-  "version": 2,
-  "source": "https://excalidraw.com",
-  "elements": [],
-  "appState": {
-    "gridSize": null,
-    "viewBackgroundColor": "#ffffff"
-  },
-  "files": {}
+  preset: "pastel" | "dark" | "blueprint" | "sketch" | "uml" | "minimal",
+  background: "#ffffff",          // 可选，覆盖画布背景色
+  grid: true,                     // 可选，是否绘制点阵背景网格
+  roughness: 0 | 1 | 2,           // 0 平滑矢量，1 轻手绘，2 强手绘（SVG 开启笔触抖动滤镜）
+  fillStyle: "solid" | "hachure", // "hachure" 开启 45° 斜线手绘填充
+  shadow: true | false,           // 是否开启卡片投影
+  fontFamily: "hand" | "sans" | "mono",
+  title: "主标题",                 // 传 "" 可不画标题
+  subtitle: "副标题",
+  width: 1100,
+  height: 720,
+  groups: [...],                  // 泳道 / 容器分组框
+  nodes: [...],                   // 通用多形态节点（流程图、UML 类、状态机、数据库等）
+  cards: [...],                   // 模块要点卡片（与 nodes 兼容）
+  edges: [...],                   // 连线（支持 from/to 自动算锚点，也兼容 arrows）
+  lifelines: [...],               // 时序图参与者生命线
+  fragments: [...],               // 时序图组合片段（alt / loop / opt / par）
+  messages: [...],                // 时序图消息
+  configBoxes: [...],             // 底部或侧边横幅框
+  rawElements: [...]              // 原生 Excalidraw 图元直通
 }
 ```
 
-### 常用图元类型 (Element Types)
+## 2. 内置主题色名（`theme`）与自定义颜色
 
-1. **`rectangle`（矩形卡片）**
-   - `x`, `y`, `width`, `height`: 坐标与尺寸
-   - `strokeColor`: 边框色（建议使用调色盘）
-   - `backgroundColor`: 填充色（建议柔和色系）
-   - `fillStyle`: `"solid"` | `"hachure"` | `"cross-hatch"`
-   - `roundness`: `{ "type": 3 }`（圆角卡片）
-   - `roughness`: `1`（手绘感）或 `0`（平滑矢量）
+- 内置 `theme`：`gray`, `slate`, `zinc`, `green`, `teal`, `cyan`, `blue`, `indigo`, `purple`, `pink`, `orange`, `yellow`, `red`, `dark`, `mono`（在 `preset: "dark"` 下自动切换为深色高对比调色盘）。
+- 自定义覆盖：任何节点、分组、横幅都可以直接指定 `bg`、`stroke`、`text`、`lightText`、`line`（hex 颜色值）。
 
-2. **`text`（文本）**
-   - `text`, `originalText`: 文本内容
-   - `fontSize`: 标题 20~30，正文 14.5~16
-   - `fontFamily`: `1` (Virgil 手绘风) | `2` (Helvetica 无衬线) | `3` (Cascadia 等宽代码)
-   - `textAlign`: `"left"` | `"center"` | `"right"`
+## 3. 节点形态（`nodes[].shape`）
 
-3. **`arrow`（箭头连线）**
-   - `points`: 相对起点的坐标序列，如 `[[0, 0], [dx, dy]]`
-   - `endArrowhead`: `"arrow"`
-   - `strokeStyle`: `"solid"`（实线流程）| `"dashed"`（虚线配置/注入）
+| `shape` | 用途 | 关键字段 |
+|---|---|---|
+| `rect` | 流程步骤 / 普通组件框 | `id, title, sub, x, y, w, h` |
+| `card` | 带虚线分隔与要点列表的模块卡片 | `id, title, sub, items: [], x, y, w, h?`（`h` 可省） |
+| `pill` / `terminator` | 流程起止 / 状态节点 | `id, title, x, y, w, h` |
+| `diamond` / `decision` | 条件分支判断 | `id, title, sub?, x, y, w, h` |
+| `ellipse` / `circle` | 椭圆 / 圆形状态 | `id, title, x, y, w, h` |
+| `initial` / `final` | 状态机起点（实心圆）/ 终点（同心圆） | `id, x, y, w` |
+| `cylinder` / `database` | 数据库 / 持久化存储 | `id, title, sub?, x, y, w, h` |
+| `parallelogram` / `io` | 数据输入 / 输出 | `id, title, x, y, w, h` |
+| `hexagon` / `prep` | 网关 / 前置准备节点 | `id, title, x, y, w, h` |
+| `actor` / `stickman` | 用例图 / 架构图外部角色 | `id, title, x, y, w` |
+| `class` / `interface` / `enum` / `entity` | UML 类框 / ER 实体框 | `id, stereotype?, title, attributes: [], methods: [], x, y, w, h?`（`h` 可省） |
+| `note` / `callout` | 折角注释便签 | `id, title/items, x, y, w, h` |
+| `text` | 纯文本标签 | `title/text, x, y, fontSize?` |
 
----
+## 4. 连线与 UML 箭头（`edges` / `arrows`）
 
-## 2. GitHub README 友好排版黄金法则
+- **按节点 ID 自动连线**：`{ from: "nodeA", to: "nodeB", fromSide?: "top"|"bottom"|"left"|"right"|"auto", toSide?: "auto", routing?: "straight"|"orthogonal"|"curved" }`
+- **按坐标手动连线**：`{ startX, startY, points: [[0,0], [dx,dy], ...] }`
+- **箭头样式（`startArrowhead` / `endArrowhead`）**：
+  - `"arrow"`：实心三角箭头（默认终点）
+  - `"open"`：开放 V 型箭头（异步调用 / 依赖）
+  - `"hollow-triangle"`（别名 `"inherit"`）：空心三角（UML 继承 `extends` / 实现 `implements`）
+  - `"filled-diamond"`（别名 `"composition"`）：实心菱形（UML 组合）
+  - `"hollow-diamond"`（别名 `"aggregation"`）：空心菱形（UML 聚合）
+  - `"circle"`：圆点
+  - `"none"`：无箭头
+- **多重性与标签**：`label`（连线中部胶囊标签）、`startLabel`（起点侧文本，如 `"1"`）、`endLabel`（终点侧文本，如 `"0..*"`）。
 
-### 痛点根源
-GitHub 网页正文阅读容器宽度通常仅有 **850px ~ 1012px**。如果在一行硬塞 5~6 个模块，整张图缩放后正文字号会急剧缩减到 6~8px，导致在屏幕上模糊难以阅读。
+## 5. 时序图专用字段（`lifelines` / `fragments` / `messages`）
 
-### 黄金规则
-
-1. **模块单行限制**：
-   - 横向单行最多排布 **3 个核心模块**（每个卡片宽度建议 300px ~ 340px）。
-   - 超过 3 个模块时，优先采用 **双行闭环流水线（S 型回环）** 或 **分层树状布局**。
-2. **字号阶梯保障**：
-   - 画布总标题：`28px ~ 32px` 加粗
-   - 卡片核心标题：`19px ~ 21px` 粗体
-   - 卡片正文要点：**不得低于 `14.5px ~ 16px`**，行距保持 `1.3 ~ 1.4`
-   - 流动标签与小 Tag：`12px ~ 13px` 加粗并带有独立浅色底框胶囊
-3. **色彩语义清晰（Pastel 调色盘）**：
-   - 🌿 **输入/采集**：薄荷绿系（`#ebfbee` / `#0ca678`）
-   - 💧 **处理/转换**：天水蓝系（`#e7f5ff` / `#1971c2`）
-   - 🔮 **规则/裁决**：紫罗兰系（`#f3f0ff` / `#7048e8`）
-   - 🍊 **输出/时钟**：暖阳橙系（`#fff4e6` / `#e8590c`）
-   - 🚨 **配置/策略**：珊瑚红系（`#fff5f5` / `#e03131`）
-   - ⚙️ **硬件/底座**：沉稳灰系（`#f1f3f5` / `#343a40`）
+- `lifelines`: `{ id, title, x, y?: 115, endY?, actor?: boolean, theme?, activations?: [{ startY, endY }] }`
+- `fragments`: `{ operator: "alt"|"opt"|"loop"|"par", condition?: string, x, y, w, h, dividers?: [{ y, condition }] }`
+- `messages`: `{ from: "lifelineId", to: "lifelineId", y, label, type?: "sync"|"async"|"return"|"self" }`
