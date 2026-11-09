@@ -139,6 +139,28 @@ func TestNormalizeSpec(t *testing.T) {
 		}
 	})
 
+	t.Run("表格自动列宽与默认表头", func(t *testing.T) {
+		out, err := NormalizeSpec(BlockSpec{
+			Type: "table",
+			Rows: [][]any{
+				{"序号", "说明", "备注"},
+				{"1", "这是一段非常非常长的说明文字，用来验证自适应列宽分配", "正常"},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.HeaderRow == nil || !*out.HeaderRow {
+			t.Errorf("行数 >= 2 时应默认开启 header_row")
+		}
+		if len(out.ColumnWidth) != 3 {
+			t.Fatalf("自动计算的列宽数量 = %d，期望 3", len(out.ColumnWidth))
+		}
+		if out.ColumnWidth[1] <= out.ColumnWidth[0] {
+			t.Errorf("长文本列列宽 %d 应大于短文本列 %d", out.ColumnWidth[1], out.ColumnWidth[0])
+		}
+	})
+
 	t.Run("递归归一化子块", func(t *testing.T) {
 		out, err := NormalizeSpec(BlockSpec{
 			Type: "ul",

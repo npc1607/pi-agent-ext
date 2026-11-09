@@ -18,6 +18,7 @@ var pythonToolNames = []string{
 	"feishu_delete_block",
 	"feishu_edit_document",
 	"feishu_insert_blocks",
+	"feishu_insert_diagram",
 	"feishu_insert_flowchart",
 	"feishu_insert_image",
 	"feishu_patch_block",

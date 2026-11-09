@@ -301,39 +301,79 @@ func (s *Server) registerImage(srv *mcp.Server) {
 	}))
 }
 
+// InsertDiagramArgs 是 feishu_insert_diagram 的入参。
+type InsertDiagramArgs struct {
+	Ref           string  `json:"ref" jsonschema:"文档引用（URL / token / document_id）"`
+	Code          string  `json:"code" jsonschema:"图表源码，支持 Mermaid（如 sequenceDiagram、flowchart、graph TD 等）或 PlantUML"`
+	Syntax        *string `json:"syntax,omitempty" jsonschema:"语法类型：auto（自动检测，默认）/ mermaid / plantuml"`
+	Index         *int    `json:"index,omitempty" jsonschema:"插入位置下标（0 起）；省略或 -1 表示末尾"`
+	ParentBlockID string  `json:"parent_block_id,omitempty" jsonschema:"父块 ID，省略 = 文档顶层"`
+}
+
+func (s *Server) registerDiagram(srv *mcp.Server) {
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "feishu_insert_diagram",
+		Description: "在文档里插入一个画板块，支持使用 Mermaid（sequenceDiagram / flowchart / graph 等）或 PlantUML 渲染图表。\n\n" +
+			"飞书画板原生支持 Mermaid 与 PlantUML 语法解析为画板节点（需要应用开通 board:whiteboard:node:create 权限）。\n\n" +
+			"示例 1 - Mermaid 流程图（flowchart）：\n" +
+			"  flowchart TD\n" +
+			"    A[用户请求] --> B[网关鉴权]\n" +
+			"    B --> C[微服务处理]\n\n" +
+			"示例 2 - Mermaid 时序图（sequenceDiagram）：\n" +
+			"  sequenceDiagram\n" +
+			"    autonumber\n" +
+			"    Client->>Server: HTTP GET /api/v1/data\n" +
+			"    Server-->>Client: 200 OK\n\n" +
+			"示例 3 - PlantUML：\n" +
+			"  @startuml\n" +
+			"  start\n" +
+			"  :处理任务;\n" +
+			"  stop\n" +
+			"  @enduml",
+	}, handler(func(ctx context.Context, in InsertDiagramArgs) (*feishu.InsertFlowchartResult, error) {
+		index := -1
+		if in.Index != nil {
+			index = *in.Index
+		}
+		syntax := ""
+		if in.Syntax != nil {
+			syntax = *in.Syntax
+		}
+		return s.c.InsertDiagram(ctx, in.Ref, in.Code, syntax, index, in.ParentBlockID)
+	}))
+}
+
 // InsertFlowchartArgs 是 feishu_insert_flowchart 的入参。
 type InsertFlowchartArgs struct {
-	Ref           string `json:"ref" jsonschema:"文档引用"`
-	PlantUML      string `json:"plantuml" jsonschema:"PlantUML 源码，需包含 @startuml / @enduml"`
-	Index         *int   `json:"index,omitempty" jsonschema:"插入位置下标（0 起）；省略或 -1 表示末尾"`
-	ParentBlockID string `json:"parent_block_id,omitempty" jsonschema:"父块 ID，省略 = 文档顶层"`
+	Ref           string  `json:"ref" jsonschema:"文档引用"`
+	PlantUML      string  `json:"plantuml,omitempty" jsonschema:"图表源码，支持 Mermaid（如 sequenceDiagram、flowchart）或 PlantUML"`
+	Code          string  `json:"code,omitempty" jsonschema:"图表源码（等价 plantuml）"`
+	Syntax        *string `json:"syntax,omitempty" jsonschema:"语法类型：auto / mermaid / plantuml"`
+	Index         *int    `json:"index,omitempty" jsonschema:"插入位置下标（0 起）；省略或 -1 表示末尾"`
+	ParentBlockID string  `json:"parent_block_id,omitempty" jsonschema:"父块 ID，省略 = 文档顶层"`
 }
 
 func (s *Server) registerFlowchart(srv *mcp.Server) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "feishu_insert_flowchart",
-		Description: "在文档里插入一个画板块，并把 PlantUML 流程图渲染进去。\n\n" +
-			"注意：飞书 docx 的 diagram 块无法通过 API 创建（1770029 not support to create），" +
-			"所以流程图的可行路径是「建 board 画板块 + 画板接口渲染 PlantUML」。\n" +
+		Description: "在文档里插入一个画板块，支持 Mermaid（sequenceDiagram / flowchart）或 PlantUML 流程图（feishu_insert_diagram 的别名）。\n\n" +
 			"需要应用开通 board:whiteboard:node:create 权限。\n\n" +
-			"示例 plantuml：\n" +
-			"  @startuml\n" +
-			"  start\n" +
-			"  :读取文档;\n" +
-			"  if (校验通过?) then (是)\n" +
-			"    :写入块;\n" +
-			"  else (否)\n" +
-			"    :返回错误;\n" +
-			"  endif\n" +
-			"  stop\n" +
-			"  @enduml\n\n" +
-			"想精确控制坐标/配色画架构图，可以只建空画板（feishu_insert_blocks 里 type=board），" +
-			"再用画板节点接口自行摆放。",
+			"示例：\n" +
+			"  flowchart TD\n" +
+			"    A[开始] --> B[结束]",
 	}, handler(func(ctx context.Context, in InsertFlowchartArgs) (*feishu.InsertFlowchartResult, error) {
 		index := -1
 		if in.Index != nil {
 			index = *in.Index
 		}
-		return s.c.InsertFlowchart(ctx, in.Ref, in.PlantUML, index, in.ParentBlockID)
+		code := in.Code
+		if code == "" {
+			code = in.PlantUML
+		}
+		syntax := ""
+		if in.Syntax != nil {
+			syntax = *in.Syntax
+		}
+		return s.c.InsertDiagram(ctx, in.Ref, code, syntax, index, in.ParentBlockID)
 	}))
 }

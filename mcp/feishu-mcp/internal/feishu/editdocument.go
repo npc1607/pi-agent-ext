@@ -118,6 +118,9 @@ func (c *Client) EditDocument(ctx context.Context, ref string, ops []Operation, 
 			results = append(results, mergeOp("patch", res))
 
 		case "insert":
+			if len(op.Blocks) == 0 {
+				return nil, missing(i, kind, "blocks")
+			}
 			index := -1
 			if op.Index != nil {
 				index = *op.Index
@@ -138,6 +141,9 @@ func (c *Client) EditDocument(ctx context.Context, ref string, ops []Operation, 
 			results = append(results, mergeOp("insert", res))
 
 		case "append":
+			if len(op.Blocks) == 0 {
+				return nil, missing(i, kind, "blocks")
+			}
 			if dryRun {
 				if err := validateSpecs(op.Blocks); err != nil {
 					stepErr = err

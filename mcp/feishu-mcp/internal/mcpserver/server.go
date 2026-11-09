@@ -32,6 +32,7 @@ func (s *Server) registerAll(srv *mcp.Server) {
 	s.registerReplace(srv)
 	s.registerEditDocument(srv)
 	s.registerImage(srv)
+	s.registerDiagram(srv)
 	s.registerFlowchart(srv)
 }
 

@@ -84,6 +84,13 @@ func NormalizeSpec(spec BlockSpec) (BlockSpec, error) {
 			out.RowSize = len(spec.Rows)
 			out.ColumnSize = cols
 		}
+		if len(out.ColumnWidth) == 0 && out.ColumnSize > 0 {
+			out.ColumnWidth = calculateColumnWidths(spec.Rows, out.ColumnSize)
+		}
+		if out.HeaderRow == nil && out.RowSize >= 2 {
+			defaultHeader := true
+			out.HeaderRow = &defaultHeader
+		}
 	case "callout", "table_cell":
 		if len(spec.Children) == 0 {
 			out.Children = []BlockSpec{{Type: "text", Text: spec.Text}}
@@ -202,4 +209,137 @@ func mapsFromAny(v any) []map[string]any {
 		}
 	}
 	return out
+}
+
+
+// calculateColumnWidths 根据表格行列与单元格内容智能计算各列像素宽度。
+func calculateColumnWidths(rows [][]any, cols int) []int {
+	if cols <= 0 {
+		return nil
+	}
+	widths := make([]int, cols)
+	maxWeights := make([]int, cols)
+
+	for _, row := range rows {
+		for colIdx, cell := range row {
+			if colIdx >= cols {
+				break
+			}
+			w := measureCellWeight(cell)
+			if w > maxWeights[colIdx] {
+				maxWeights[colIdx] = w
+			}
+		}
+	}
+
+	// 保证每列至少有一点基准权重
+	totalWeight := 0
+	for i := 0; i < cols; i++ {
+		if maxWeights[i] < 4 {
+			maxWeights[i] = 4
+		}
+		totalWeight += maxWeights[i]
+	}
+
+	// 基础最小宽度
+	minColWidths := make([]int, cols)
+	for i := 0; i < cols; i++ {
+		if maxWeights[i] <= 6 {
+			minColWidths[i] = 60
+		} else if maxWeights[i] <= 12 {
+			minColWidths[i] = 100
+		} else {
+			minColWidths[i] = 140
+		}
+	}
+
+	// 目标总宽度：飞书页面标准正文宽约为 720~760px
+	targetTotal := 720
+	minRequiredTotal := 0
+	for _, m := range minColWidths {
+		minRequiredTotal += m
+	}
+	if minRequiredTotal > targetTotal {
+		targetTotal = minRequiredTotal
+	}
+
+	if totalWeight == 0 {
+		avg := targetTotal / cols
+		for i := range widths {
+			widths[i] = avg
+		}
+		return widths
+	}
+
+	// 初步按比例分配
+	for i := 0; i < cols; i++ {
+		allocated := int(float64(maxWeights[i]) / float64(totalWeight) * float64(targetTotal))
+		if allocated < minColWidths[i] {
+			allocated = minColWidths[i]
+		}
+		widths[i] = allocated
+	}
+
+	// 微调平摊到 targetTotal
+	sum := 0
+	for _, w := range widths {
+		sum += w
+	}
+	if sum < targetTotal && cols > 0 {
+		maxColIdx := 0
+		maxW := 0
+		for i, w := range widths {
+			if w > maxW {
+				maxW = w
+				maxColIdx = i
+			}
+		}
+		widths[maxColIdx] += targetTotal - sum
+	}
+
+	return widths
+}
+
+func measureCellWeight(v any) int {
+	switch cell := v.(type) {
+	case nil:
+		return 0
+	case string:
+		return textVisualLength(cell)
+	case map[string]any:
+		if t, ok := cell["text"].(string); ok {
+			return textVisualLength(t)
+		}
+		if spans, ok := cell["spans"].([]any); ok {
+			total := 0
+			for _, s := range spans {
+				if sm, ok := s.(map[string]any); ok {
+					if st, ok := sm["text"].(string); ok {
+						total += textVisualLength(st)
+					}
+				}
+			}
+			return total
+		}
+	}
+	return textVisualLength(fmt.Sprint(v))
+}
+
+func textVisualLength(s string) int {
+	lines := strings.Split(s, "\n")
+	maxLen := 0
+	for _, line := range lines {
+		l := 0
+		for _, r := range line {
+			if r > 127 {
+				l += 2
+			} else {
+				l += 1
+			}
+		}
+		if l > maxLen {
+			maxLen = l
+		}
+	}
+	return maxLen
 }

@@ -186,6 +186,28 @@ func TestInsertFlowchartMissingScopeHint(t *testing.T) {
 	}
 }
 
+func TestInsertDiagramMermaidSyntax(t *testing.T) {
+	c, env := newWriteEnv(t, flatDoc())
+	mermaidCode := "sequenceDiagram\nAlice->>Bob: Hello"
+	res, err := c.InsertDiagram(context.Background(), "/docx/doc1", mermaidCode, "", -1, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.WhiteboardID != "wb-1" {
+		t.Errorf("WhiteboardID = %q，期望 wb-1", res.WhiteboardID)
+	}
+	pl := env.bodies["POST /board/v1/whiteboards/wb-1/nodes/plantuml"]
+	if pl == nil {
+		t.Fatalf("没有调用 plantuml 渲染")
+	}
+	if pl["plant_uml_code"] != mermaidCode {
+		t.Errorf("plant_uml_code = %v", pl["plant_uml_code"])
+	}
+	if got, _ := toInt(pl["syntax_type"]); got != 2 {
+		t.Errorf("syntax_type = %v，期望 2 (Mermaid)", pl["syntax_type"])
+	}
+}
+
 func TestBlockPayloadImageAndBoard(t *testing.T) {
 	if _, err := blockPayload(BlockSpec{Type: "image"}); err == nil {
 		t.Error("image 缺 token 时应报错")

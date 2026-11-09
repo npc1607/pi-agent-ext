@@ -419,6 +419,12 @@ func (c *Client) DeleteRange(ctx context.Context, ref string, start, end int, pa
 	if parentID == "" {
 		parentID = docID
 	}
+	if start < 0 {
+		return nil, errf(-1, "start_index 不能为负数（got %d）", start)
+	}
+	if end < 0 {
+		return nil, errf(-1, "end_index 不能为负数（got %d）", end)
+	}
 	if end <= start {
 		return nil, errf(-1, "end_index 必须大于 start_index")
 	}
