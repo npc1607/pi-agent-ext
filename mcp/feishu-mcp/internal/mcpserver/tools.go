@@ -31,6 +31,19 @@ func (s *Server) registerMessage(srv *mcp.Server) {
 	}, handler(func(ctx context.Context, in SendMessageArgs) (*feishu.SendMessageResult, error) {
 		return s.c.SendMessage(ctx, in.ReceiveID, in.Content, in.ReceiveIDType, in.MsgType)
 	}))
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "feishu_list_chat_members",
+		Description: "获取指定飞书群聊的成员列表（返回每个成员的姓名 name 和 open_id）。当需要按名字查找群成员并给对方发私聊（feishu_send_message, receive_id_type=\"open_id\"）时使用。",
+		InputSchema: inputSchema[ListChatMembersArgs](nil),
+	}, handler(func(ctx context.Context, in ListChatMembersArgs) (*feishu.ListChatMembersResult, error) {
+		return s.c.ListChatMembers(ctx, in.ChatID)
+	}))
+}
+
+// ListChatMembersArgs 是 feishu_list_chat_members 的入参。
+type ListChatMembersArgs struct {
+	ChatID string `json:"chat_id" jsonschema:"飞书群聊 ID（如 oc_xxx）"`
 }
 
 // sendMessageInputSchema 在反射生成的 schema 上给两个枚举字段挂可选值。

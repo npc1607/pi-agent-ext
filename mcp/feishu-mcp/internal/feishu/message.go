@@ -65,4 +65,54 @@ func (c *Client) SendMessage(ctx context.Context, receiveID, content string, rec
 	return &SendMessageResult{MessageID: id}, nil
 }
 
+// ChatMember 表示群聊中的一个成员。
+type ChatMember struct {
+	MemberID     string `json:"member_id"`
+	MemberIDType string `json:"member_id_type"`
+	Name         string `json:"name"`
+}
+
+// ListChatMembersResult 是获取群成员列表的结果。
+type ListChatMembersResult struct {
+	ChatID  string       `json:"chat_id"`
+	Members []ChatMember `json:"members"`
+}
+
+// ListChatMembers 获取指定飞书群的成员列表（含姓名与 open_id，供按人名发私聊或识别群成员）。
+func (c *Client) ListChatMembers(ctx context.Context, chatID string) (*ListChatMembersResult, error) {
+	chatID = strings.TrimSpace(chatID)
+	if chatID == "" {
+		return nil, errf(-1, "chat_id 不能为空")
+	}
+	data, err := c.do(ctx, http.MethodGet, "/im/v1/chats/"+url.PathEscape(chatID)+"/members", nil, url.Values{
+		"member_id_type": {"open_id"},
+		"page_size":      {"100"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	rawItems, _ := data["items"].([]any)
+	members := make([]ChatMember, 0, len(rawItems))
+	for _, it := range rawItems {
+		m, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		memberID, _ := m["member_id"].(string)
+		memberType, _ := m["member_id_type"].(string)
+		name, _ := m["name"].(string)
+		if memberID != "" {
+			members = append(members, ChatMember{
+				MemberID:     memberID,
+				MemberIDType: memberType,
+				Name:         name,
+			})
+		}
+	}
+	return &ListChatMembersResult{
+		ChatID:  chatID,
+		Members: members,
+	}, nil
+}
+
 func lower(s string) string { return strings.ToLower(s) }

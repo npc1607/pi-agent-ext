@@ -21,6 +21,7 @@ var pythonToolNames = []string{
 	"feishu_insert_diagram",
 	"feishu_insert_flowchart",
 	"feishu_insert_image",
+	"feishu_list_chat_members",
 	"feishu_patch_block",
 	"feishu_read_document",
 	"feishu_replace_block",
